@@ -55,18 +55,18 @@ export const NEXT_COUNT = 5;
  */
 export const LINE_CLEAR_COLUMN_DELAY_MS = 30;
 export const LINE_CLEAR_CELL_MS = 210;
-export const LINE_CLEAR_POP_MS = LINE_CLEAR_COLUMN_DELAY_MS * (BOARD_WIDTH - 1) + LINE_CLEAR_CELL_MS;
+export const LINE_CLEAR_POP_MS =
+  LINE_CLEAR_COLUMN_DELAY_MS * (BOARD_WIDTH - 1) + LINE_CLEAR_CELL_MS;
 export const LINE_CLEAR_DROP_MS = 230;
 export const LINE_CLEAR_DELAY_MS = LINE_CLEAR_POP_MS + LINE_CLEAR_DROP_MS;
 
 /**
- * 重力（ハート3・4）の落下演出中の停止時間。
+ * 重力（ハート3）の落下演出中の停止時間。
  * デザイン仕様 04-D: 列ごとに左→右へ32msずらし、1ブロック270msで落ちる。
  */
 export const GRAVITY_COLUMN_DELAY_MS = 32;
 export const GRAVITY_BLOCK_MS = 270;
-export const GRAVITY_DELAY_MS =
-  GRAVITY_COLUMN_DELAY_MS * (BOARD_WIDTH - 1) + GRAVITY_BLOCK_MS;
+export const GRAVITY_DELAY_MS = GRAVITY_COLUMN_DELAY_MS * (BOARD_WIDTH - 1) + GRAVITY_BLOCK_MS;
 
 /**
  * レベルごとの自然落下間隔（ミリ秒）。ガイドライン準拠のカーブ。
@@ -141,9 +141,7 @@ export const GARBAGE_TABLE: Record<ClearType, number> = {
 export const GARBAGE_B2B_BONUS = 1;
 
 /** コンボ数に応じた加算。添字がコンボ数で、表を超えたら最終値 */
-export const GARBAGE_COMBO_TABLE: readonly number[] = [
-  0, 0, 1, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5,
-];
+export const GARBAGE_COMBO_TABLE: readonly number[] = [0, 0, 1, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5];
 
 /** パーフェクトクリアの加算 */
 export const GARBAGE_PERFECT_CLEAR = 10;
@@ -165,6 +163,18 @@ export const BOMB_CLEAR_SCORE_RATIO = 0.5;
 /** スタックの上限 */
 export const STACK_MAX = 4;
 
+/** 種別ごとのスタック上限。未ロック時は STACK_MAX を表示・受付上限に使う。 */
+export const STACK_MAX_BY_KIND: Readonly<Record<EventKind, number>> = {
+  bomb: 4,
+  heart: 3,
+  coin: 3,
+  clover: 4,
+};
+
+export function getStackMax(kind: EventKind | null): number {
+  return kind === null ? STACK_MAX : STACK_MAX_BY_KIND[kind];
+}
+
 /** 発動後のクールタイム（ミリ秒） */
 export const STACK_COOLDOWN_MS = 10_000;
 
@@ -174,14 +184,17 @@ export const EVENT_TILES_PER_BAG = 2;
 /** フィーバータイムの上限（ミリ秒）。重複発動時は加算されるがここで頭打ち */
 export const FEVER_MAX_MS = 15_000;
 
+/** 通常時のホールド可能回数 */
+export const HOLD_CAPACITY = 1;
+
 /**
  * 各イベントの段階別効果。添字はスタック数 1-4（0 番は未使用のため null）。
  * 仕様上未定義の段階は直下の定義済み段階へフォールバック済み。
  */
 export type BombEffect = { clearRows: number; feverMs: number };
-export type HeartEffect = { holdCapacity: number; gravity: boolean };
+export type HeartEffect = { garbageReduction: number; gravity: boolean };
 export type CoinEffect = { slowRate: number; durationMs: number };
-export type CloverEffect = { feverMs: number; comboRate: number } | null;
+export type CloverEffect = { feverMs: number; comboRateStep: number } | null;
 
 export const BOMB_EFFECTS: readonly (BombEffect | null)[] = [
   null,
@@ -193,31 +206,31 @@ export const BOMB_EFFECTS: readonly (BombEffect | null)[] = [
 
 export const HEART_EFFECTS: readonly (HeartEffect | null)[] = [
   null,
-  { holdCapacity: 2, gravity: false },
-  { holdCapacity: 2, gravity: false }, // ハート2 はハート1 へフォールバック
-  { holdCapacity: 2, gravity: true },
-  { holdCapacity: 2, gravity: true }, // ハート4 はハート3 へフォールバック
+  { garbageReduction: 1, gravity: false },
+  { garbageReduction: 1, gravity: false }, // ハート2 はハート1 へフォールバック
+  { garbageReduction: 1, gravity: true }, // ハート3 は1の効果も併せて発動
+  null, // ハートのスタック上限は3
 ];
 
 export const COIN_EFFECTS: readonly (CoinEffect | null)[] = [
   null,
-  { slowRate: 0.1, durationMs: 5000 },
-  { slowRate: 0.15, durationMs: 5000 },
-  { slowRate: 0.2, durationMs: 5000 },
-  { slowRate: 0.2, durationMs: 5000 }, // コイン4 はコイン3 へフォールバック
+  { slowRate: 0.1, durationMs: 7000 },
+  { slowRate: 0.15, durationMs: 7000 },
+  { slowRate: 0.2, durationMs: 7000 },
+  null, // コインのスタック上限は3
 ];
 
 export const CLOVER_EFFECTS: readonly CloverEffect[] = [
   null,
   null, // クローバー1 は不発（スタックを消費しない）
-  { feverMs: 10_000, comboRate: 0.2 },
-  { feverMs: 10_000, comboRate: 0.2 }, // クローバー3 はクローバー2 へフォールバック
-  { feverMs: 10_000, comboRate: 0.25 },
+  { feverMs: 10_000, comboRateStep: 0.05 },
+  { feverMs: 10_000, comboRateStep: 0.05 }, // クローバー3 は2の効果で全消費
+  { feverMs: 10_000, comboRateStep: 0.15 },
 ];
 
 /** 発動可能かどうか（不発の組み合わせを判定する） */
 export function isTriggerable(kind: EventKind, count: number): boolean {
-  if (count < 1 || count > STACK_MAX) return false;
+  if (count < 1 || count > getStackMax(kind)) return false;
   switch (kind) {
     case 'bomb':
       return BOMB_EFFECTS[count] != null;

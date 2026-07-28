@@ -26,11 +26,13 @@ import type { Command } from './commands';
 import {
   BOARD_WIDTH,
   BOMB_CLEAR_SCORE_RATIO,
+  COMBO_RATE_BASE,
   FEVER_MAX_MS,
   GARBAGE_DELAY_MS,
   GRAVITY_DELAY_MS,
   GRAVITY_TABLE_MS,
   HARD_DROP_POINT,
+  HOLD_CAPACITY,
   LINES_PER_LEVEL,
   LINE_CLEAR_DELAY_MS,
   LOCK_DELAY_MS,
@@ -87,10 +89,14 @@ export function createGame(seed: number, options: GameOptions = {}): GameState {
     active: null,
     hold: null,
     holdUsed: 0,
-    holdCapacity: 1,
     next,
     stack: createEmptyStack(),
-    fever: { until: 0, comboRate: 0 },
+    fever: {
+      until: 0,
+      cloverUntil: 0,
+      comboRate: COMBO_RATE_BASE,
+      comboRateStep: 0,
+    },
     slow: { until: 0, rate: 0 },
     score: 0,
     level: 1,
@@ -166,6 +172,10 @@ function getDropIntervalMs(state: GameState): number {
 
 function isFeverActive(state: GameState): boolean {
   return state.fever.until > state.elapsedMs;
+}
+
+function isCloverFeverActive(state: GameState): boolean {
+  return state.fever.cloverUntil > state.elapsedMs;
 }
 
 function isSlowActive(state: GameState): boolean {
@@ -347,6 +357,7 @@ function resolveClears(
   const clearType = resolveClearType(rows.length, tspin);
   const combo = state.combo;
   const feverActive = isFeverActive(state);
+  const cloverFeverActive = isCloverFeverActive(state);
 
   // 異種イベントのボーナスはイベント枠へ入れる
   let stats = addBreakdown(state.stats, 'event', accumulated.bonus);
@@ -394,6 +405,12 @@ function resolveClears(
     level,
     combo: nextCombo,
     b2b: clearType !== null ? isB2bEligible(clearType) : state.b2b,
+    fever: cloverFeverActive
+      ? {
+          ...state.fever,
+          comboRate: state.fever.comboRate + state.fever.comboRateStep,
+        }
+      : state.fever,
     stats: { ...stats, maxCombo: Math.max(stats.maxCombo, nextCombo) },
   };
 
@@ -406,7 +423,9 @@ function resolveClears(
       b2b: state.b2b && isB2bEligible(clearType),
       perfectClear: isBoardEmpty(removeRows(state.board, rows)),
       feverActive,
-      feverAttackRate: attackRateFromComboRate(state.fever.comboRate),
+      feverAttackRate: cloverFeverActive
+        ? attackRateFromComboRate(COMBO_RATE_BASE + state.fever.comboRateStep)
+        : 1,
     });
     next = applyOffset(next, attack, sink).state;
   }
@@ -437,18 +456,15 @@ export function getPendingGarbage(state: GameState): number {
   return total;
 }
 
-/**
- * 自分の攻撃で待機中のおじゃまを打ち消す。
- * 古いものから順に消し、残った攻撃力を相手への送信ぶんとして返す。
- */
-function applyOffset(
+/** 待機中のおじゃまを古いものから指定行数だけ打ち消す。 */
+function cancelPendingGarbage(
   state: GameState,
-  attack: number,
+  amount: number,
   sink: EventSink,
-): { state: GameState; sent: number } {
-  if (attack <= 0) return { state, sent: 0 };
+): { state: GameState; remaining: number } {
+  if (amount <= 0) return { state, remaining: 0 };
 
-  let remaining = attack;
+  let remaining = amount;
   let cancelled = 0;
   const queue: PendingGarbage[] = [];
 
@@ -464,9 +480,20 @@ function applyOffset(
   }
 
   if (cancelled > 0) sink.emit({ kind: 'garbageOffset', lines: cancelled });
-  if (remaining > 0) sink.emit({ kind: 'garbageSent', lines: remaining });
 
-  return { state: { ...state, pendingGarbage: queue }, sent: remaining };
+  return { state: { ...state, pendingGarbage: queue }, remaining };
+}
+
+function applyOffset(
+  state: GameState,
+  attack: number,
+  sink: EventSink,
+): { state: GameState; sent: number } {
+  const cancelled = cancelPendingGarbage(state, attack, sink);
+  if (cancelled.remaining > 0) {
+    sink.emit({ kind: 'garbageSent', lines: cancelled.remaining });
+  }
+  return { state: cancelled.state, sent: cancelled.remaining };
 }
 
 /**
@@ -593,12 +620,12 @@ function triggerStack(state: GameState, sink: EventSink): GameState {
     if (attack > 0) next = applyOffset(next, attack, sink).state;
   }
 
-  // ハート: ホールド回数の拡張
-  if (outcome.holdCapacity !== null) {
-    next = { ...next, holdCapacity: Math.max(next.holdCapacity, outcome.holdCapacity) };
+  // ハート: 到着待ちのおじゃまを古いものから指定行数だけ取り除く
+  if (outcome.garbageReduction > 0) {
+    next = cancelPendingGarbage(next, outcome.garbageReduction, sink).state;
   }
 
-  // ハート3・4: 重力。盤面はまだ動かさず、落下演出の終了時にまとめて適用する
+  // ハート3: 重力。盤面はまだ動かさず、落下演出の終了時にまとめて適用する
   if (outcome.gravity) {
     const moves = computeGravityMoves(next.board);
     if (moves.length > 0) {
@@ -624,8 +651,32 @@ function triggerStack(state: GameState, sink: EventSink): GameState {
   if (outcome.feverMs > 0) {
     const remaining = Math.max(0, next.fever.until - next.elapsedMs);
     const duration = Math.min(remaining + outcome.feverMs, FEVER_MAX_MS);
-    const comboRate = outcome.comboRate > 0 ? outcome.comboRate : next.fever.comboRate;
-    next = { ...next, fever: { until: next.elapsedMs + duration, comboRate } };
+    const cloverActive = isCloverFeverActive(next);
+    const cloverTriggered = outcome.comboRateStep > 0;
+    const comboRate = cloverTriggered
+      ? COMBO_RATE_BASE
+      : cloverActive
+        ? next.fever.comboRate
+        : COMBO_RATE_BASE;
+    const comboRateStep = cloverTriggered
+      ? outcome.comboRateStep
+      : cloverActive
+        ? next.fever.comboRateStep
+        : 0;
+    const cloverUntil = cloverTriggered
+      ? next.elapsedMs + outcome.feverMs
+      : cloverActive
+        ? next.fever.cloverUntil
+        : 0;
+    next = {
+      ...next,
+      fever: {
+        until: next.elapsedMs + duration,
+        cloverUntil,
+        comboRate,
+        comboRateStep,
+      },
+    };
     sink.emit({ kind: 'feverStarted', durationMs: duration, comboRate });
   }
 
@@ -742,17 +793,21 @@ function applyCommand(state: GameState, command: Command, sink: EventSink): Game
     case 'hold': {
       const piece = state.active;
       if (piece === null) return state;
-      if (state.holdUsed >= state.holdCapacity) return state;
+      if (state.holdUsed >= HOLD_CAPACITY) return state;
 
       sink.emit({ kind: 'holdUsed', type: piece.type });
 
-      const spawn = getSpawnPosition(piece.type);
+      const heldPiece = {
+        type: piece.type,
+        eventCellIndex: piece.eventCellIndex,
+        eventKind: piece.eventKind,
+      };
 
       if (state.hold === null) {
         // ホールドが空: 現在のミノを預けて次を出す
         const withHold: GameState = {
           ...state,
-          hold: piece.type,
+          hold: heldPiece,
           active: null,
           holdUsed: state.holdUsed + 1,
         };
@@ -761,14 +816,15 @@ function applyCommand(state: GameState, command: Command, sink: EventSink): Game
         return { ...spawned, holdUsed: withHold.holdUsed };
       }
 
-      // ホールドと入れ替える。イベントタイルは持ち越さない
+      // ホールドと入れ替える。イベントタイルはミノに付着したまま持ち越す
+      const spawn = getSpawnPosition(state.hold.type);
       const swapped: ActivePiece = {
-        type: state.hold,
+        type: state.hold.type,
         rot: 0,
         x: spawn.x,
-        y: getSpawnPosition(state.hold).y,
-        eventCellIndex: null,
-        eventKind: null,
+        y: spawn.y,
+        eventCellIndex: state.hold.eventCellIndex,
+        eventKind: state.hold.eventKind,
       };
 
       if (!canPlace(state.board, swapped.type, swapped.rot, swapped.x, swapped.y)) {
@@ -778,7 +834,7 @@ function applyCommand(state: GameState, command: Command, sink: EventSink): Game
 
       return {
         ...state,
-        hold: piece.type,
+        hold: heldPiece,
         active: swapped,
         holdUsed: state.holdUsed + 1,
         lockTimerMs: null,
@@ -823,6 +879,19 @@ export function step(
   const slowWasActive = isSlowActive(state);
 
   let next: GameState = { ...state, elapsedMs: state.elapsedMs + deltaMs };
+
+  // クローバー由来の10秒が終わったら、フィーバー自体が続いていても係数だけ通常へ戻す
+  if (!isCloverFeverActive(next) && next.fever.comboRateStep > 0) {
+    next = {
+      ...next,
+      fever: {
+        ...next.fever,
+        cloverUntil: 0,
+        comboRate: COMBO_RATE_BASE,
+        comboRateStep: 0,
+      },
+    };
+  }
 
   // フィーバーだった時間を積む（リザルトの「FEVER 合計」用）
   if (feverWasActive) {

@@ -43,11 +43,14 @@ export type ActivePiece = {
   eventKind: EventKind | null;
 };
 
+/** ホールド中のミノ。イベントタイルもミノに付着したまま保持する。 */
+export type HeldMino = Pick<ActivePiece, 'type' | 'eventCellIndex' | 'eventKind'>;
+
 /** カレントイベントスタック */
 export type EventStack = {
   /** カレント種別。null = 未ロック */
   kind: EventKind | null;
-  /** 蓄積数 0-4 */
+  /** 蓄積数 0-4（ハート・コインは最大3） */
   count: number;
   /** このミリ秒（ゲーム内経過時間）までクールタイム中 */
   cooldownUntil: number;
@@ -55,10 +58,14 @@ export type EventStack = {
 
 /** フィーバータイム状態 */
 export type FeverState = {
-  /** このミリ秒まで継続。0 なら非フィーバー */
+  /** フィーバー全体がこのミリ秒まで継続する。0 なら非フィーバー */
   until: number;
-  /** フィーバー中に適用されるコンボ係数（0.15 / 0.20 / 0.25） */
+  /** クローバー由来の係数上昇がこのミリ秒まで継続する */
+  cloverUntil: number;
+  /** 現在適用されるコンボ係数。クローバー以外では常に0.15 */
   comboRate: number;
+  /** クローバーフィーバー中、コンボ成立ごとに加算する係数 */
+  comboRateStep: number;
 };
 
 /** 落下速度低下（コイン効果） */
@@ -129,11 +136,9 @@ export type BagState = {
 export type GameState = {
   board: Board;
   active: ActivePiece | null;
-  hold: MinoType | null;
+  hold: HeldMino | null;
   /** このミノで既にホールドを使った回数 */
   holdUsed: number;
-  /** ホールド可能回数。ハート効果で 2 になる */
-  holdCapacity: number;
   next: QueuedMino[];
   stack: EventStack;
   fever: FeverState;

@@ -4,6 +4,7 @@ import {
   getEffectiveLevel,
   getGhostY,
   getPendingGarbage,
+  isFever,
   receiveGarbage,
   step,
 } from './game';
@@ -11,6 +12,8 @@ import { cellAt } from './board';
 import {
   BOARD_HEIGHT,
   BOARD_WIDTH,
+  COMBO_RATE_BASE,
+  FEVER_MAX_MS,
   FIXED_TIMESTEP_MS,
   GARBAGE_DELAY_MS,
   GRAVITY_DELAY_MS,
@@ -34,6 +37,18 @@ function withPieceAt(
     active: { type, rot, x, y, eventCellIndex: null, eventKind: null },
     lastMoveWasRotation: false,
   };
+}
+
+/** 最下段の左端だけを空け、縦IでSingleを作れる状態にする */
+function withSingleLineClear(state: GameState): GameState {
+  const board = state.board.map((row) => row.slice());
+  const bottom = board[BOARD_HEIGHT - 1];
+  if (bottom !== undefined) {
+    for (let x = 0; x < BOARD_WIDTH; x++) {
+      bottom[x] = x === 0 ? null : { color: 'J', event: null };
+    }
+  }
+  return withPieceAt({ ...state, board }, 'I', -2, BOARD_HEIGHT - 4, 1);
 }
 import type { Command } from './commands';
 import type { GameState } from './types';
@@ -67,8 +82,12 @@ describe('初期化', () => {
   });
 
   it('異なるシードでは異なるミノ順になる', () => {
-    const a = createGame(SEED).next.map((n) => n.type).join('');
-    const b = createGame(SEED + 1).next.map((n) => n.type).join('');
+    const a = createGame(SEED)
+      .next.map((n) => n.type)
+      .join('');
+    const b = createGame(SEED + 1)
+      .next.map((n) => n.type)
+      .join('');
     expect(a).not.toBe(b);
   });
 });
@@ -118,6 +137,40 @@ describe('操作', () => {
 
     const twice = step(once.state, FIXED_TIMESTEP_MS, [{ kind: 'hold' }]);
     expect(twice.state.holdUsed).toBe(1);
+  });
+
+  it('イベント付きミノをホールドしても種類と付着位置が保持される', () => {
+    const game = createGame(SEED);
+    const prepared: GameState = {
+      ...game,
+      active: {
+        ...(game.active ?? {
+          type: 'T' as const,
+          rot: 0 as const,
+          x: 3,
+          y: 0,
+          eventCellIndex: null,
+          eventKind: null,
+        }),
+        eventCellIndex: 2,
+        eventKind: 'clover',
+      },
+    };
+
+    const held = step(prepared, FIXED_TIMESTEP_MS, [{ kind: 'hold' }]).state;
+    expect(held.hold).toMatchObject({
+      type: prepared.active?.type,
+      eventCellIndex: 2,
+      eventKind: 'clover',
+    });
+
+    const swapped = step({ ...held, holdUsed: 0 }, FIXED_TIMESTEP_MS, [{ kind: 'hold' }]).state;
+    expect(swapped.active).toMatchObject({
+      type: prepared.active?.type,
+      rot: 0,
+      eventCellIndex: 2,
+      eventKind: 'clover',
+    });
   });
 
   it('マウス追従（moveTo）で指定した列へ移動する', () => {
@@ -182,13 +235,29 @@ describe('イベントスタックの発動', () => {
 
     const result = step(prepared, FIXED_TIMESTEP_MS, [{ kind: 'triggerStack' }]);
 
-    expect(
-      result.events.some((e) => e.kind === 'stackMisfire' && e.reason === 'cooldown'),
-    ).toBe(true);
+    expect(result.events.some((e) => e.kind === 'stackMisfire' && e.reason === 'cooldown')).toBe(
+      true,
+    );
     expect(result.state.stack.count).toBe(1);
   });
 
-  it('ハート1でホールド可能回数が2になる', () => {
+  it.each([1, 2] as const)(
+    'ハート%dは到着待ちのおじゃまを1列減らして全スタックを消費する',
+    (count) => {
+      const game = receiveGarbage(createGame(SEED), 2, 4);
+      const prepared: GameState = {
+        ...game,
+        stack: { kind: 'heart', count, cooldownUntil: 0 },
+      };
+
+      const result = step(prepared, FIXED_TIMESTEP_MS, [{ kind: 'triggerStack' }]);
+      expect(getPendingGarbage(result.state)).toBe(1);
+      expect(result.state.stack.count).toBe(0);
+      expect(result.events.some((event) => event.kind === 'garbageOffset')).toBe(true);
+    },
+  );
+
+  it('ハート1はおじゃまがなくても空振りして全スタックを消費する', () => {
     const game = createGame(SEED);
     const prepared: GameState = {
       ...game,
@@ -196,7 +265,9 @@ describe('イベントスタックの発動', () => {
     };
 
     const result = step(prepared, FIXED_TIMESTEP_MS, [{ kind: 'triggerStack' }]);
-    expect(result.state.holdCapacity).toBe(2);
+    expect(getPendingGarbage(result.state)).toBe(0);
+    expect(result.state.stack.count).toBe(0);
+    expect(result.events.some((event) => event.kind === 'garbageSent')).toBe(false);
   });
 
   it('破棄キーでカレント種別が解除される', () => {
@@ -381,7 +452,7 @@ describe('ソフトドロップ', () => {
   });
 });
 
-describe('重力（ハート3・4）', () => {
+describe('重力（ハート3）', () => {
   /** 指定位置に浮いたブロックを1つ置いた盤面を作る */
   function withFloatingBlock(state: GameState, x: number, y: number): GameState {
     const board = state.board.map((row) => row.slice());
@@ -391,7 +462,7 @@ describe('重力（ハート3・4）', () => {
   }
 
   it('発動すると落下演出のフェーズに入り、盤面はまだ変わらない', () => {
-    const game = withFloatingBlock(createGame(SEED), 3, 10);
+    const game = receiveGarbage(withFloatingBlock(createGame(SEED), 3, 10), 2, 4);
     const prepared: GameState = {
       ...game,
       stack: { kind: 'heart', count: 3, cooldownUntil: 0 },
@@ -402,6 +473,7 @@ describe('重力（ハート3・4）', () => {
     expect(result.events.some((e) => e.kind === 'gravityApplied')).toBe(true);
     expect(result.state.gravity).not.toBeNull();
     expect(result.state.gravity?.moves.length).toBeGreaterThan(0);
+    expect(getPendingGarbage(result.state)).toBe(1);
     // 演出中なので盤面はまだ落ちていない
     expect(cellAt(result.state.board, 3, 10)?.color).toBe('S');
   });
@@ -444,7 +516,6 @@ describe('重力（ハート3・4）', () => {
 
     const result = step(prepared, FIXED_TIMESTEP_MS, [{ kind: 'triggerStack' }]);
     expect(result.state.gravity).toBeNull();
-    expect(result.state.holdCapacity).toBe(2);
   });
 });
 
@@ -454,7 +525,12 @@ describe('フィーバータイム', () => {
     const prepared: GameState = {
       ...game,
       combo: 5,
-      fever: { until: game.elapsedMs + 5000, comboRate: 0.2 },
+      fever: {
+        until: game.elapsedMs + 5000,
+        cloverUntil: 0,
+        comboRate: COMBO_RATE_BASE,
+        comboRateStep: 0,
+      },
     };
 
     // 消去のないハードドロップを1回行う
@@ -464,10 +540,106 @@ describe('フィーバータイム', () => {
 
   it('フィーバーが切れるとコンボが途切れる', () => {
     const game = createGame(SEED);
-    const prepared: GameState = { ...game, combo: 5, fever: { until: 0, comboRate: 0 } };
+    const prepared: GameState = {
+      ...game,
+      combo: 5,
+      fever: {
+        until: 0,
+        cloverUntil: 0,
+        comboRate: COMBO_RATE_BASE,
+        comboRateStep: 0,
+      },
+    };
 
     const result = step(prepared, FIXED_TIMESTEP_MS, [{ kind: 'hardDrop' }]);
     expect(result.state.combo).toBe(0);
     expect(result.events.some((e) => e.kind === 'comboBroken')).toBe(true);
+  });
+
+  it('爆弾フィーバーではコンボ係数が通常値0.15から変わらない', () => {
+    const game = createGame(SEED);
+    const prepared: GameState = {
+      ...game,
+      stack: { kind: 'bomb', count: 4, cooldownUntil: 0 },
+    };
+
+    const result = step(prepared, FIXED_TIMESTEP_MS, [{ kind: 'triggerStack' }]);
+    expect(result.state.fever.comboRate).toBe(COMBO_RATE_BASE);
+    expect(result.state.fever.comboRateStep).toBe(0);
+  });
+
+  it.each([
+    [2, 0.05],
+    [3, 0.05],
+    [4, 0.15],
+  ] as const)('クローバー%dはコンボ成立ごとに係数を%f加算する', (count, stepRate) => {
+    const game = createGame(SEED);
+    const triggered = step(
+      {
+        ...game,
+        stack: { kind: 'clover', count, cooldownUntil: 0 },
+      },
+      FIXED_TIMESTEP_MS,
+      [{ kind: 'triggerStack' }],
+    ).state;
+
+    expect(triggered.stack.count).toBe(0);
+    expect(triggered.fever.comboRate).toBe(COMBO_RATE_BASE);
+    expect(triggered.fever.comboRateStep).toBe(stepRate);
+
+    const cleared = step(withSingleLineClear(triggered), FIXED_TIMESTEP_MS, [
+      { kind: 'hardDrop' },
+    ]).state;
+    expect(cleared.fever.comboRate).toBeCloseTo(COMBO_RATE_BASE + stepRate);
+  });
+
+  it('爆弾で全体を延長してもクローバー由来の10秒後に係数だけ通常へ戻る', () => {
+    const game = createGame(SEED);
+    const bomb = step(
+      {
+        ...game,
+        stack: { kind: 'bomb', count: 4, cooldownUntil: 0 },
+      },
+      FIXED_TIMESTEP_MS,
+      [{ kind: 'triggerStack' }],
+    ).state;
+    const clover = step(
+      {
+        ...bomb,
+        stack: { kind: 'clover', count: 4, cooldownUntil: 0 },
+      },
+      FIXED_TIMESTEP_MS,
+      [{ kind: 'triggerStack' }],
+    ).state;
+
+    expect(clover.fever.until - clover.elapsedMs).toBe(FEVER_MAX_MS);
+    expect(clover.fever.cloverUntil - clover.elapsedMs).toBe(10_000);
+
+    const afterClover = step(clover, 10_000 + FIXED_TIMESTEP_MS).state;
+    expect(isFever(afterClover)).toBe(true);
+    expect(afterClover.fever.comboRate).toBe(COMBO_RATE_BASE);
+    expect(afterClover.fever.comboRateStep).toBe(0);
+  });
+
+  it('フィーバーの重複加算は残り15秒で頭打ちになる', () => {
+    const game = createGame(SEED);
+    const first = step(
+      {
+        ...game,
+        stack: { kind: 'bomb', count: 4, cooldownUntil: 0 },
+      },
+      FIXED_TIMESTEP_MS,
+      [{ kind: 'triggerStack' }],
+    ).state;
+    const second = step(
+      {
+        ...first,
+        stack: { kind: 'bomb', count: 4, cooldownUntil: 0 },
+      },
+      FIXED_TIMESTEP_MS,
+      [{ kind: 'triggerStack' }],
+    ).state;
+
+    expect(second.fever.until - second.elapsedMs).toBe(FEVER_MAX_MS);
   });
 });

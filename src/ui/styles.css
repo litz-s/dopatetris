@@ -97,11 +97,7 @@ body {
 .cabinet-noise {
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    90deg,
-    rgba(35, 32, 28, 0.028) 0 2px,
-    transparent 2px 7px
-  );
+  background: repeating-linear-gradient(90deg, rgba(35, 32, 28, 0.028) 0 2px, transparent 2px 7px);
   pointer-events: none;
   z-index: 20;
 }
@@ -237,33 +233,15 @@ body {
 
 .hold-row {
   display: flex;
-  gap: 10px;
+  justify-content: center;
 }
 
 .hold-slot {
-  flex: 1;
+  flex: 0 0 132px;
   height: 80px;
   background: #0f0a18;
   display: grid;
   place-items: center;
-}
-
-.hold-slot-2nd {
-  background: var(--well);
-  border: 2px dashed #a89c85;
-  flex-direction: column;
-  gap: 2px;
-  color: var(--muted);
-}
-
-.hold-slot-2nd.is-open {
-  border-color: var(--accent-magenta);
-  color: var(--accent-magenta);
-}
-
-.hold-2nd-mark {
-  font-size: 14px;
-  line-height: 1;
 }
 
 /* ---------------------------------------------------------------- イベントスタック */
@@ -689,15 +667,21 @@ body {
 @keyframes disco-border {
   0% {
     border-color: var(--magenta);
-    box-shadow: 0 5px 0 var(--ink-deep), 0 0 26px rgba(255, 47, 146, 0.55);
+    box-shadow:
+      0 5px 0 var(--ink-deep),
+      0 0 26px rgba(255, 47, 146, 0.55);
   }
   33% {
     border-color: var(--cyan);
-    box-shadow: 0 5px 0 var(--ink-deep), 0 0 26px rgba(0, 229, 255, 0.55);
+    box-shadow:
+      0 5px 0 var(--ink-deep),
+      0 0 26px rgba(0, 229, 255, 0.55);
   }
   66% {
     border-color: var(--yellow);
-    box-shadow: 0 5px 0 var(--ink-deep), 0 0 26px rgba(255, 230, 0, 0.55);
+    box-shadow:
+      0 5px 0 var(--ink-deep),
+      0 0 26px rgba(255, 230, 0, 0.55);
   }
 }
 

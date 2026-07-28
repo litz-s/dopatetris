@@ -4,14 +4,17 @@
  */
 import { useEffect, useRef } from 'react';
 import { getShape } from '@core/pieces';
-import type { MinoType } from '@core/types';
-import { drawBlock } from '@render/blocks';
+import type { EventKind, MinoType } from '@core/types';
+import { drawBlock, drawEventTile } from '@render/blocks';
 import { MINO_COLORS } from '@render/theme';
 
 type Props = {
   type: MinoType | null;
   /** イベントタイルを持つミノであることを示す枠 */
   hasEvent?: boolean;
+  /** ホールド中のイベントタイル位置。Next は位置未確定なので渡さない。 */
+  eventCellIndex?: number | null;
+  eventKind?: EventKind | null;
   /** 描画領域の一辺（CSS px） */
   size?: number;
   /** セルの実体サイズ。省略時は領域から自動計算する */
@@ -19,7 +22,15 @@ type Props = {
   dimmed?: boolean;
 };
 
-export function MinoPreview({ type, hasEvent = false, size = 80, cell, dimmed = false }: Props) {
+export function MinoPreview({
+  type,
+  hasEvent = false,
+  eventCellIndex = null,
+  eventKind = null,
+  size = 80,
+  cell,
+  dimmed = false,
+}: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -54,20 +65,26 @@ export function MinoPreview({ type, hasEvent = false, size = 80, cell, dimmed = 
     const offsetX = Math.round((size - pitch * cols) / 2);
     const offsetY = Math.round((size - pitch * rows) / 2);
 
-    for (const [dx, dy] of shape) {
-      drawBlock(
-        ctx,
-        offsetX + (dx - minX) * pitch,
-        offsetY + (dy - minY) * pitch,
-        body,
-        MINO_COLORS[type],
-        { alpha: dimmed ? 0.42 : 1 },
-      );
-    }
-  }, [type, size, cell, dimmed]);
+    shape.forEach(([dx, dy], index) => {
+      const x = offsetX + (dx - minX) * pitch;
+      const y = offsetY + (dy - minY) * pitch;
+      if (index === eventCellIndex && eventKind !== null) {
+        drawEventTile(ctx, x, y, body, eventKind, 'L1', 0, {
+          alpha: dimmed ? 0.42 : 1,
+        });
+      } else {
+        drawBlock(ctx, x, y, body, MINO_COLORS[type], {
+          alpha: dimmed ? 0.42 : 1,
+        });
+      }
+    });
+  }, [type, eventCellIndex, eventKind, size, cell, dimmed]);
 
   return (
-    <div className={`mino-preview ${hasEvent ? 'has-event' : ''}`} style={{ width: size, height: size }}>
+    <div
+      className={`mino-preview ${hasEvent || eventKind !== null ? 'has-event' : ''}`}
+      style={{ width: size, height: size }}
+    >
       <canvas ref={ref} style={{ width: size, height: size }} />
     </div>
   );

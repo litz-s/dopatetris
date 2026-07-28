@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { accumulateEvents, createEmptyStack, resolveTrigger } from './stack';
-import { OFF_KIND_BONUS, STACK_MAX } from './config/balance';
+import { OFF_KIND_BONUS, STACK_MAX, getStackMax } from './config/balance';
 import type { EventStack } from './types';
 
 const LEVEL = 1;
@@ -30,10 +30,24 @@ describe('イベントスタックの蓄積（種類ロック方式）', () => {
     expect(result.events.some((e) => e.kind === 'stackRejected')).toBe(true);
   });
 
-  it('上限4を超えない。超過分はボーナスになる', () => {
-    const result = accumulateEvents(stackOf('coin', 4), ['coin'], LEVEL);
+  it.each(['heart', 'coin'] as const)('%s は上限3を超えず、超過分はボーナスになる', (kind) => {
+    const result = accumulateEvents(stackOf(kind, 3), [kind], LEVEL);
+    expect(result.stack.count).toBe(3);
+    expect(result.bonus).toBe(OFF_KIND_BONUS * LEVEL);
+  });
+
+  it.each(['bomb', 'clover'] as const)('%s は4個まで蓄積できる', (kind) => {
+    const result = accumulateEvents(stackOf(kind, 3), [kind], LEVEL);
     expect(result.stack.count).toBe(STACK_MAX);
-    expect(result.bonus).toBeGreaterThan(0);
+    expect(result.bonus).toBe(0);
+  });
+
+  it('未ロック時は4枠、ハートとコインのロック中だけ3枠になる', () => {
+    expect(getStackMax(null)).toBe(4);
+    expect(getStackMax('bomb')).toBe(4);
+    expect(getStackMax('clover')).toBe(4);
+    expect(getStackMax('heart')).toBe(3);
+    expect(getStackMax('coin')).toBe(3);
   });
 
   it('左→右の順で処理されるため、先頭の種別がロックされる', () => {
@@ -49,17 +63,40 @@ describe('発動効果の解決', () => {
     expect(resolveTrigger('bomb', 4)).toMatchObject({ clearRows: 4, feverMs: 9000 });
   });
 
-  it('ハート2はハート1へフォールバックする（重力なし）', () => {
-    expect(resolveTrigger('heart', 2)).toMatchObject({ holdCapacity: 2, gravity: false });
+  it('ハート1は待機中のおじゃまを1列減らす', () => {
+    expect(resolveTrigger('heart', 1)).toMatchObject({
+      garbageReduction: 1,
+      gravity: false,
+    });
   });
 
-  it('ハート3・4は重力が発生する', () => {
-    expect(resolveTrigger('heart', 3)).toMatchObject({ gravity: true });
-    expect(resolveTrigger('heart', 4)).toMatchObject({ gravity: true });
+  it('ハート2はハート1へフォールバックして全消費する', () => {
+    expect(resolveTrigger('heart', 2)).toMatchObject({
+      garbageReduction: 1,
+      gravity: false,
+    });
   });
 
-  it('コイン4はコイン3へフォールバックする', () => {
-    expect(resolveTrigger('coin', 4)).toMatchObject({ slow: { rate: 0.2, durationMs: 5000 } });
+  it('ハート3はおじゃま1列除去と重力を両方発生させる', () => {
+    expect(resolveTrigger('heart', 3)).toMatchObject({
+      garbageReduction: 1,
+      gravity: true,
+    });
+    expect(resolveTrigger('heart', 4)).toBeNull();
+  });
+
+  it.each([
+    [1, 0.1],
+    [2, 0.15],
+    [3, 0.2],
+  ] as const)('コイン%dは7秒間、落下速度を%f下げる', (count, rate) => {
+    expect(resolveTrigger('coin', count)).toMatchObject({
+      slow: { rate, durationMs: 7000 },
+    });
+  });
+
+  it('コイン4は上限外で発動できない', () => {
+    expect(resolveTrigger('coin', 4)).toBeNull();
   });
 
   it('クローバー1は不発', () => {
@@ -67,18 +104,14 @@ describe('発動効果の解決', () => {
   });
 
   it('クローバー3はクローバー2へフォールバックする', () => {
-    expect(resolveTrigger('clover', 3)).toMatchObject({ feverMs: 10_000, comboRate: 0.2 });
+    expect(resolveTrigger('clover', 3)).toMatchObject({
+      feverMs: 10_000,
+      comboRateStep: 0.05,
+    });
   });
 
-  it('クローバー4はコンボ係数が最大になる', () => {
-    expect(resolveTrigger('clover', 4)).toMatchObject({ comboRate: 0.25 });
-  });
-
-  it('最高段階の効果だけが適用され、下位効果は累積しない', () => {
-    // ハート3 は重力を持つが、これは仕様上「最高段階のみ」。
-    // ホールド拡張はハート系共通の効果として保持される。
-    const heart3 = resolveTrigger('heart', 3);
-    expect(heart3?.clearRows).toBe(0);
-    expect(heart3?.feverMs).toBe(0);
+  it('クローバー2はコンボごとに係数+0.05、4は+0.15になる', () => {
+    expect(resolveTrigger('clover', 2)).toMatchObject({ comboRateStep: 0.05 });
+    expect(resolveTrigger('clover', 4)).toMatchObject({ comboRateStep: 0.15 });
   });
 });

@@ -4,7 +4,13 @@
  * 画面揺れは renderer が DOM の transform を直接書き換えるため、React は再描画しない。
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createGame, getFeverRemaining, getStackCooldownRemaining, isFever, step } from '@core/game';
+import {
+  createGame,
+  getFeverRemaining,
+  getStackCooldownRemaining,
+  isFever,
+  step,
+} from '@core/game';
 import {
   BOARD_WIDTH,
   COMBO_RATE_BASE,
@@ -15,7 +21,7 @@ import { getPendingGarbage, receiveGarbage } from '@core/game';
 import { BOARD_SYNC_INTERVAL_MS } from '@net/protocol';
 import type { BoardSnapshot } from '@net/protocol';
 import { encodeBoard } from '@net/snapshot';
-import type { EventStack, GameState, GameStats, MinoType, QueuedMino } from '@core/types';
+import type { EventStack, GameState, GameStats, HeldMino, QueuedMino } from '@core/types';
 import { InputManager } from '@input/inputManager';
 import type { KeyLogEntry } from '@input/inputManager';
 import { audioEngine } from '@audio/audioEngine';
@@ -35,8 +41,7 @@ export type HudSnapshot = {
   comboRate: number;
   b2b: boolean;
   next: QueuedMino[];
-  hold: MinoType | null;
-  holdCapacity: number;
+  hold: HeldMino | null;
   stack: EventStack;
   stackCooldownMs: number;
   fever: boolean;
@@ -214,10 +219,7 @@ export function useGameEngine(
             if (multiplayerHooks !== undefined) {
               for (const event of result.events) {
                 if (event.kind !== 'garbageSent') continue;
-                multiplayerHooks.onAttack(
-                  event.lines,
-                  Math.floor(Math.random() * BOARD_WIDTH),
-                );
+                multiplayerHooks.onAttack(event.lines, Math.floor(Math.random() * BOARD_WIDTH));
               }
             }
           }
@@ -274,7 +276,6 @@ export function useGameEngine(
           b2b: current.b2b,
           next: current.next,
           hold: current.hold,
-          holdCapacity: current.holdCapacity,
           stack: current.stack,
           stackCooldownMs: getStackCooldownRemaining(current),
           fever: isFever(current),

@@ -3,7 +3,7 @@
  *
  * 蓄積ルール（種類ロック方式）:
  *   1. スタックが空のときにイベントタイルを消すと、その種別がカレントとしてロックされる
- *   2. 以降は同種のみ加算される（上限 STACK_MAX）
+ *   2. 以降は同種のみ加算される（爆弾・クローバー4、ハート・コイン3）
  *   3. 異種を消しても加算されず、ボーナススコアに変換される
  *   4. 発動または破棄でロックが解除される
  */
@@ -13,7 +13,7 @@ import {
   COIN_EFFECTS,
   HEART_EFFECTS,
   OFF_KIND_BONUS,
-  STACK_MAX,
+  getStackMax,
   isTriggerable,
 } from './config/balance';
 import type { GameEvent } from './events';
@@ -53,7 +53,7 @@ export function accumulateEvents(
       continue;
     }
 
-    if (current.count >= STACK_MAX) {
+    if (current.count >= getStackMax(current.kind)) {
       // 上限に達している。超過分はボーナスへ回す
       const gained = OFF_KIND_BONUS * Math.max(1, level);
       bonus += gained;
@@ -75,10 +75,10 @@ export type StackOutcome = {
   clearRows: number;
   /** 付与するフィーバー時間（ミリ秒） */
   feverMs: number;
-  /** フィーバー中に適用されるコンボ係数。0 なら既定のまま */
-  comboRate: number;
-  /** ホールド可能回数の上書き（ハート） */
-  holdCapacity: number | null;
+  /** クローバーフィーバー中、コンボ成立ごとに増える係数 */
+  comboRateStep: number;
+  /** 到着待ちのおじゃまから取り除く行数（ハート） */
+  garbageReduction: number;
   /** 重力を1回発生させるか（ハート） */
   gravity: boolean;
   /** 落下速度低下（コイン） */
@@ -88,8 +88,8 @@ export type StackOutcome = {
 const NO_OUTCOME: StackOutcome = {
   clearRows: 0,
   feverMs: 0,
-  comboRate: 0,
-  holdCapacity: null,
+  comboRateStep: 0,
+  garbageReduction: 0,
   gravity: false,
   slow: null,
 };
@@ -110,7 +110,11 @@ export function resolveTrigger(kind: EventKind, count: number): StackOutcome | n
     case 'heart': {
       const effect = HEART_EFFECTS[count];
       if (effect == null) return null;
-      return { ...NO_OUTCOME, holdCapacity: effect.holdCapacity, gravity: effect.gravity };
+      return {
+        ...NO_OUTCOME,
+        garbageReduction: effect.garbageReduction,
+        gravity: effect.gravity,
+      };
     }
     case 'coin': {
       const effect = COIN_EFFECTS[count];
@@ -120,7 +124,11 @@ export function resolveTrigger(kind: EventKind, count: number): StackOutcome | n
     case 'clover': {
       const effect = CLOVER_EFFECTS[count];
       if (effect == null) return null;
-      return { ...NO_OUTCOME, feverMs: effect.feverMs, comboRate: effect.comboRate };
+      return {
+        ...NO_OUTCOME,
+        feverMs: effect.feverMs,
+        comboRateStep: effect.comboRateStep,
+      };
     }
   }
 }

@@ -8,6 +8,7 @@
 import {
   BOMB_EFFECTS,
   CLOVER_EFFECTS,
+  COMBO_RATE_BASE,
   GARBAGE_B2B_BONUS,
   GARBAGE_COMBO_TABLE,
   GARBAGE_MAX_PER_PIECE,
@@ -78,7 +79,7 @@ export function getFeverAttackRate(kind: EventKind, count: number): number {
   if (kind !== 'clover') return 1;
   const effect = CLOVER_EFFECTS[count];
   if (effect == null) return 1;
-  return attackRateFromComboRate(effect.comboRate);
+  return attackRateFromComboRate(COMBO_RATE_BASE + effect.comboRateStep);
 }
 
 /**
@@ -96,7 +97,10 @@ export function attackRateFromComboRate(comboRate: number): number {
  * 受け側に溜まっているおじゃまを、自分の攻撃で打ち消してから残りを送る。
  * 戻り値の pending は相殺後に自分が受ける残り、attack は相手へ送る残り。
  */
-export function offsetGarbage(pending: number, attack: number): { pending: number; attack: number } {
+export function offsetGarbage(
+  pending: number,
+  attack: number,
+): { pending: number; attack: number } {
   if (pending <= 0) return { pending: 0, attack };
   if (attack <= 0) return { pending, attack: 0 };
 

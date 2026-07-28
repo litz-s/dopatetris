@@ -9,6 +9,7 @@ import {
   COIN_EFFECTS,
   HEART_EFFECTS,
   STACK_MAX,
+  getStackMax,
 } from '@core/config/balance';
 import { EVENT_KINDS } from '@core/types';
 import type { EventKind } from '@core/types';
@@ -34,7 +35,7 @@ function describe(kind: EventKind, count: number): string {
     case 'heart': {
       const e = HEART_EFFECTS[count];
       if (!e) return '—';
-      return e.gravity ? 'ホールド2回 ＋ 重力を1回発生' : 'ホールドが2回できる';
+      return e.gravity ? 'おじゃま1列除去 ＋ 重力を1回発生' : '到着前のおじゃまを1列除去';
     }
     case 'coin': {
       const e = COIN_EFFECTS[count];
@@ -43,7 +44,7 @@ function describe(kind: EventKind, count: number): string {
     case 'clover': {
       const e = CLOVER_EFFECTS[count];
       if (!e) return '不発（スタックは消費しない）';
-      return `${e.feverMs / 1000}秒フィーバー ＋ コンボ係数 ${e.comboRate * 100}%`;
+      return `${e.feverMs / 1000}秒フィーバー ＋ コンボ毎に係数 +${e.comboRateStep * 100}%`;
     }
   }
 }
@@ -70,12 +71,13 @@ export function HowToScreen({ onClose }: Props) {
         <section className="panel panel-dark howto-intro">
           <p>
             ミノの中に <strong>1タイルだけ</strong> イベントが紛れ込みます。
-            そのタイルを含む列を消すと <strong>カレント種別がロック</strong> され、
-            以降は<strong>同じ種類だけ</strong>が最大{STACK_MAX}個まで溜まります。
+            そのタイルを含む列を消すと <strong>カレント種別がロック</strong> され、 以降は
+            <strong>同じ種類だけ</strong>が最大{STACK_MAX}個まで溜まります。
+            ハートとコインだけは最大3個です。
           </p>
           <p>
-            列は<strong>左から右へ</strong>消えるため、
-            同時消しのときは<strong>いちばん左のイベント</strong>が種別を決めます。
+            列は<strong>左から右へ</strong>消えるため、 同時消しのときは
+            <strong>いちばん左のイベント</strong>が種別を決めます。
             違う種類はスタックされず、ボーナススコアに変わります。
           </p>
           <p>
@@ -92,7 +94,7 @@ export function HowToScreen({ onClose }: Props) {
                 <span className="mono-9 ink">{NAMES[kind]}</span>
               </div>
               <ul className="howto-steps">
-                {[1, 2, 3, 4].map((count) => (
+                {Array.from({ length: getStackMax(kind) }, (_, index) => index + 1).map((count) => (
                   <li key={count}>
                     <span className="howto-count">×{count}</span>
                     <span className="howto-effect">{describe(kind, count)}</span>
@@ -105,6 +107,7 @@ export function HowToScreen({ onClose }: Props) {
 
         <p className="howto-footnote">
           ※ 効果は「到達した最高段階のみ」適用され、下位の効果は累積しません。
+          ただしハート×3は×1のおじゃま除去も発動します。
           フィーバー中はスコア1.5倍、コンボが途切れません。
         </p>
 

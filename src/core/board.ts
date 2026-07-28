@@ -3,15 +3,7 @@
  */
 import { BOARD_HEIGHT, BOARD_WIDTH } from './config/balance';
 import { getShape } from './pieces';
-import type {
-  ActivePiece,
-  Board,
-  Cell,
-  EventKind,
-  GravityMove,
-  MinoType,
-  Rotation,
-} from './types';
+import type { ActivePiece, Board, Cell, EventKind, GravityMove, MinoType, Rotation } from './types';
 
 export function createEmptyBoard(): Board {
   return Array.from({ length: BOARD_HEIGHT }, () => Array<Cell>(BOARD_WIDTH).fill(null));
@@ -31,7 +23,13 @@ export function isFree(board: Board, x: number, y: number): boolean {
 }
 
 /** ミノが指定位置・回転で配置可能か */
-export function canPlace(board: Board, type: MinoType, rot: Rotation, x: number, y: number): boolean {
+export function canPlace(
+  board: Board,
+  type: MinoType,
+  rot: Rotation,
+  x: number,
+  y: number,
+): boolean {
   for (const [dx, dy] of getShape(type, rot)) {
     if (!isFree(board, x + dx, y + dy)) return false;
   }
@@ -114,7 +112,7 @@ export function removeBottomRows(board: Board, count: number): { board: Board; r
 }
 
 /**
- * 重力を適用する（ハート3・4の効果）。
+ * 重力を適用する（ハート3の効果）。
  * 列ごとに浮いているブロックを下詰めする（naive gravity）。
  * 何も動かなかった場合は元の盤面をそのまま返す。
  */

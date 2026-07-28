@@ -34,6 +34,19 @@ describe('スコア計算', () => {
     expect(fever).toBe(Math.round(normal * FEVER_SCORE_MULTIPLIER));
   });
 
+  it('クローバー以外のフィーバーでは不正な0指定でもコンボ係数を0.15未満にしない', () => {
+    const score = computeClearScore({
+      ...BASE,
+      combo: 4,
+      feverActive: true,
+      feverComboRate: 0,
+    });
+    const expected = Math.round(
+      SCORE_TABLE.single * (1 + COMBO_RATE_BASE * 4) * FEVER_SCORE_MULTIPLIER,
+    );
+    expect(score).toBe(expected);
+  });
+
   it('クローバー効果でフィーバー中のコンボ係数が上がる', () => {
     const base = computeClearScore({ ...BASE, combo: 10, feverActive: true, feverComboRate: 0.15 });
     const boosted = computeClearScore({

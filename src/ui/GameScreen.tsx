@@ -5,7 +5,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { COMBO } from '@render/motion';
-import { LINES_PER_LEVEL, STACK_MAX } from '@core/config/balance';
+import { LINES_PER_LEVEL, STACK_COOLDOWN_MS, STACK_MAX, getStackMax } from '@core/config/balance';
 import { BOMB_EFFECTS, CLOVER_EFFECTS, COIN_EFFECTS, HEART_EFFECTS } from '@core/config/balance';
 import type { EventKind, GameStats } from '@core/types';
 import { formatKey } from '@input/keybinds';
@@ -37,7 +37,7 @@ function describeEffect(kind: EventKind, count: number): string {
     case 'heart': {
       const effect = HEART_EFFECTS[count];
       if (!effect) return '';
-      return effect.gravity ? 'ホールド2回＋重力を1回発生' : 'ホールドが2回できる';
+      return effect.gravity ? 'おじゃま1列除去＋重力を1回発生' : '到着前のおじゃまを1列除去';
     }
     case 'coin': {
       const effect = COIN_EFFECTS[count];
@@ -46,7 +46,7 @@ function describeEffect(kind: EventKind, count: number): string {
     case 'clover': {
       const effect = CLOVER_EFFECTS[count];
       if (!effect) return 'あと1つでフィーバー（今は不発）';
-      return `${effect.feverMs / 1000}秒フィーバー＋コンボ毎+${Math.round((effect.comboRate - 0.15) * 100)}%`;
+      return `${effect.feverMs / 1000}秒フィーバー＋コンボ毎+${Math.round(effect.comboRateStep * 100)}%`;
     }
   }
 }
@@ -83,36 +83,37 @@ export function GameScreen({ settings, onFinish, onExit }: Props) {
 
   return (
     <Cabinet scale={scale} innerRef={cabinetRef} className={fever ? 'is-fever' : ''}>
+      <TopBar hud={hud} />
 
-        <TopBar hud={hud} />
+      <div className="plate plate-left">
+        <HoldPanel hud={hud} />
+        <StackPanel hud={hud} />
+        <KeyLog hud={hud} />
+      </div>
 
-        <div className="plate plate-left">
-          <HoldPanel hud={hud} />
-          <StackPanel hud={hud} />
-          <KeyLog hud={hud} />
-        </div>
-
-        <div ref={shakeRef} className="board-shake">
-          <div className="bezel">
-            <div className="crt">
-              <canvas ref={canvasRef} className="playfield" />
-            </div>
+      <div ref={shakeRef} className="board-shake">
+        <div className="bezel">
+          <div className="crt">
+            <canvas ref={canvasRef} className="playfield" />
           </div>
         </div>
+      </div>
 
-        <div className="plate plate-right">
-          <NextPanel hud={hud} />
-          <ScorePanel hud={hud} />
-          <ComboPanel hud={hud} />
-          <KeyHints />
+      <div className="plate plate-right">
+        <NextPanel hud={hud} />
+        <ScorePanel hud={hud} />
+        <ComboPanel hud={hud} />
+        <KeyHints />
+      </div>
+
+      {fever && (
+        <div className="fever-banner">
+          <span className="fever-banner-text">FEVER TIME</span>
+          <span className="fever-banner-count">
+            {((hud?.feverRemainingMs ?? 0) / 1000).toFixed(1)}
+          </span>
         </div>
-
-        {fever && (
-          <div className="fever-banner">
-            <span className="fever-banner-text">FEVER TIME</span>
-            <span className="fever-banner-count">{((hud?.feverRemainingMs ?? 0) / 1000).toFixed(1)}</span>
-          </div>
-        )}
+      )}
 
       {paused && hud?.status === 'playing' && (
         <Overlay title="PAUSED">
@@ -163,17 +164,19 @@ function TopBar({ hud }: { hud: HudSnapshot | null }) {
 }
 
 export function HoldPanel({ hud }: { hud: HudSnapshot | null }) {
-  const capacity = hud?.holdCapacity ?? 1;
+  const held = hud?.hold ?? null;
   return (
     <section className="panel panel-cream">
-      <h2 className="panel-label">HOLD {capacity === 2 ? '×2' : '×1'}</h2>
+      <h2 className="panel-label">HOLD ×1</h2>
       <div className="hold-row">
         <div className="hold-slot">
-          <MinoPreview type={hud?.hold ?? null} size={72} cell={20} />
-        </div>
-        <div className={`hold-slot hold-slot-2nd ${capacity === 2 ? 'is-open' : ''}`}>
-          <span className="hold-2nd-mark">♥</span>
-          <span className="mono-8">2ND</span>
+          <MinoPreview
+            type={held?.type ?? null}
+            eventCellIndex={held?.eventCellIndex ?? null}
+            eventKind={held?.eventKind ?? null}
+            size={72}
+            cell={20}
+          />
         </div>
       </div>
     </section>
@@ -189,7 +192,8 @@ export function StackPanel({ hud }: { hud: HudSnapshot | null }) {
   const count = hud?.stack.count ?? 0;
   const cooldown = hud?.stackCooldownMs ?? 0;
   const onCooldown = cooldown > 0;
-  const ratio = onCooldown ? 1 - cooldown / 10000 : 1;
+  const ratio = onCooldown ? 1 - cooldown / STACK_COOLDOWN_MS : 1;
+  const capacity = getStackMax(kind);
 
   return (
     <section className={`panel panel-dark ${kind !== null ? 'is-locked' : ''}`}>
@@ -199,7 +203,7 @@ export function StackPanel({ hud }: { hud: HudSnapshot | null }) {
       </div>
 
       <div className="stack-slots">
-        {Array.from({ length: STACK_MAX }, (_, index) =>
+        {Array.from({ length: kind === null ? STACK_MAX : capacity }, (_, index) =>
           kind !== null && index < count ? (
             <EventIcon key={index} event={kind} size={48} glow="L2" />
           ) : (
@@ -263,6 +267,7 @@ export function NextPanel({ hud }: { hud: HudSnapshot | null }) {
           >
             <MinoPreview
               type={item.type}
+              hasEvent={item.hasEvent}
               size={index === 0 ? 56 : 46}
               cell={index === 0 ? 16 : 14}
               dimmed={index > 0}

@@ -28,7 +28,7 @@ export type ScoreContext = {
 
 /** 現在有効なコンボ係数を返す */
 export function getComboRate(feverActive: boolean, feverComboRate: number): number {
-  return feverActive ? feverComboRate : COMBO_RATE_BASE;
+  return feverActive ? Math.max(COMBO_RATE_BASE, feverComboRate) : COMBO_RATE_BASE;
 }
 
 /**
