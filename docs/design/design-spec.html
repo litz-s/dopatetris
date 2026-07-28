@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DotGothic16&family=Bungee&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#ded3bd; }
+  a { color:#c4116a; text-decoration:none; border-bottom:1px solid rgba(196,17,106,.4); }
+  a:hover { color:#0090a8; border-bottom-color:#0090a8; }
+  @keyframes popClear {
+    0%, 8% { transform:scale(1); filter:brightness(1); }
+    13% { transform:scale(1.34) rotate(-3deg); filter:brightness(2.6); }
+    20% { transform:scale(.15) rotate(8deg); filter:brightness(3); opacity:1; }
+    24%, 88% { transform:scale(0); opacity:0; }
+    100% { transform:scale(1); opacity:1; filter:brightness(1); }
+  }
+  @keyframes popSpark {
+    0%, 10% { transform:scale(0); opacity:0; }
+    16% { transform:scale(1.9); opacity:1; }
+    30%, 100% { transform:scale(2.6); opacity:0; }
+  }
+  @keyframes dropSlam {
+    0% { transform:translateY(-146px) scaleY(1.14); }
+    34% { transform:translateY(0) scaleY(1); }
+    42% { transform:translateY(0) scaleY(.7) scaleX(1.2); }
+    56% { transform:translateY(0) scaleY(1.1) scaleX(.94); }
+    68%, 100% { transform:translateY(0) scaleY(1) scaleX(1); }
+  }
+  @keyframes splashOut {
+    0%, 32% { transform:translate(0,0) scale(.4); opacity:0; }
+    40% { opacity:1; }
+    100% { transform:translate(var(--sx), var(--sy)) scale(0); opacity:0; }
+  }
+  @keyframes slamShock {
+    0%, 34% { transform:scaleX(.2); opacity:0; }
+    42% { transform:scaleX(1); opacity:.9; }
+    60%, 100% { transform:scaleX(1.5); opacity:0; }
+  }
+  @keyframes explodeCell {
+    0%, 12% { transform:translate(0,0) rotate(0) scale(1); opacity:1; filter:brightness(1); }
+    18% { transform:translate(0,0) scale(1.3); filter:brightness(3); }
+    46% { transform:translate(var(--ex), -70px) rotate(150deg) scale(.7); opacity:.9; }
+    72%, 100% { transform:translate(calc(var(--ex) * 1.7), 60px) rotate(320deg) scale(.2); opacity:0; }
+  }
+  @keyframes flashOut { 0%, 14% { opacity:0; } 17% { opacity:.85; } 30%, 100% { opacity:0; } }
+  @keyframes gravFall {
+    0%, 18% { transform:translateY(-86px); }
+    54% { transform:translateY(0); }
+    62% { transform:translateY(-9px); }
+    72%, 100% { transform:translateY(0); }
+  }
+  @keyframes feverBounce { 0%, 100% { transform:translateY(0) rotate(-4deg); } 45% { transform:translateY(-16px) rotate(5deg); } }
+  @keyframes feverGlow { 0%, 100% { box-shadow:0 0 14px rgba(255,230,0,.5); filter:brightness(1); } 50% { box-shadow:0 0 44px rgba(255,47,146,.95); filter:brightness(1.45); } }
+  @keyframes comboPop {
+    0%, 60% { transform:scale(1) rotate(0); }
+    68% { transform:scale(1.5) rotate(-4deg); }
+    80% { transform:scale(.94) rotate(2deg); }
+    92%, 100% { transform:scale(1) rotate(0); }
+  }
+  @keyframes comboRise { 0% { transform:translateY(14px) scale(.6); opacity:0; } 22% { transform:translateY(-6px) scale(1.15); opacity:1; } 70% { transform:translateY(-34px) scale(1); opacity:.9; } 100% { transform:translateY(-56px) scale(.9); opacity:0; } }
+  @keyframes shakeHard {
+    0%, 62%, 100% { transform:translate(0,0) rotate(0); }
+    64% { transform:translate(-13px, 7px) rotate(-.7deg); }
+    68% { transform:translate(11px, -6px) rotate(.6deg); }
+    72% { transform:translate(-8px, 4px) rotate(-.4deg); }
+    77% { transform:translate(5px, -3px) rotate(.25deg); }
+    83% { transform:translate(-2px, 1px); }
+  }
+  @keyframes eq { 0%, 100% { height:14%; } 50% { height:92%; } }
+  @keyframes blink { 0%, 49% { opacity:1; } 50%, 100% { opacity:.18; } }
+  @keyframes dopaPulse { 0%, 100% { transform:scale(1); filter:brightness(1); } 50% { transform:scale(1.06); filter:brightness(1.35); } }
+  @keyframes scanSoft { 0% { transform:translateY(-100%); } 100% { transform:translateY(100%); } }
+</style>
+</helmet>
+
+<section style="min-height:100vh;padding:80px 90px 160px;background:#ded3bd;font-family:'DotGothic16',sans-serif;color:#23201c;display:flex;flex-direction:column;gap:80px">
+
+  <!-- ===== header ===== -->
+  <div id="2a" style="display:flex;flex-direction:column;gap:16px;max-width:1180px">
+    <div style="display:flex;align-items:center;gap:14px">
+      <span style="font-family:'Press Start 2P',monospace;font-size:12px;background:#23201c;color:#ffe600;padding:9px 12px 7px">2a</span>
+      <span style="font-family:'Press Start 2P',monospace;font-size:11px;letter-spacing:.2em;color:#8d8271">DESIGN &amp; MOTION SPEC — for Claude Code</span>
+    </div>
+    <h1 style="margin:0;font-family:'Bungee',sans-serif;font-size:72px;line-height:.94;letter-spacing:.01em;text-wrap:balance">ドパガキテトリス<br><span style="color:#c4116a">SPEC SHEET</span></h1>
+    <p style="margin:0;font-size:20px;line-height:1.75;color:#5c5347;max-width:900px;text-wrap:pretty">1a（CRTアーケード）のネオン発光をベースに、外側の面はクリーム樹脂へ。<strong>光るのはブラウン管の中だけ</strong>という原則で統一する。走査線ノイズは弱め、ミノには一切かけない。以下のトークン・タイル・モーション値をそのまま実装値として使用してよい。</p>
+  </div>
+
+  <!-- ===== 01 reference frame ===== -->
+  <div style="display:flex;flex-direction:column;gap:22px">
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:3px solid #c3b69c;padding-bottom:12px">
+      <span style="font-family:'Press Start 2P',monospace;font-size:22px;color:#c4116a">01</span>
+      <span style="font-family:'Bungee',sans-serif;font-size:28px">REFERENCE SCREEN</span>
+      <span style="font-size:17px;color:#8d8271">1a ＋ クリーム筐体。これが基準の1画面。</span>
+    </div>
+
+    <div style="position:relative;width:1120px;height:720px;overflow:hidden;background:#efe6d2;border:3px solid #b8ab92;box-shadow:0 6px 0 #c3b69c,0 40px 80px rgba(35,32,28,.28)">
+      <div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(35,32,28,.028) 0 2px,transparent 2px 7px);pointer-events:none"></div>
+
+      <div style="position:absolute;top:0;left:0;right:0;height:64px;background:#e5dac3;border-bottom:4px solid #c3b69c;display:flex;align-items:center;justify-content:space-between;padding:0 26px">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="width:20px;height:20px;background:#c4116a"></div>
+          <span style="font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271;letter-spacing:.18em">ROOM #A7K2 / 4P</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span style="font-family:'Press Start 2P',monospace;font-size:9px;color:#5c5347;letter-spacing:.14em">LV 08</span>
+          <div style="display:flex;gap:4px">
+            <div style="width:34px;height:8px;background:#c4116a"></div>
+            <div style="width:34px;height:8px;background:#c4116a"></div>
+            <div style="width:34px;height:8px;background:#c3b69c"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- left plate -->
+      <div style="position:absolute;left:26px;top:88px;width:250px;display:flex;flex-direction:column;gap:16px">
+        <div style="background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:14px">
+          <div style="font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271;letter-spacing:.18em;margin-bottom:12px">HOLD ×2</div>
+          <div style="display:flex;gap:10px">
+            <div style="flex:1;height:80px;background:#0f0a18;display:flex;align-items:center;justify-content:center">
+              <div style="display:grid;grid-template-columns:repeat(2,20px);grid-auto-rows:20px;gap:2px">
+                <div style="background:#ffe600;box-shadow:inset 0 3px 0 rgba(255,255,255,.5),inset 0 -3px 0 rgba(0,0,0,.35)"></div>
+                <div style="background:#ffe600;box-shadow:inset 0 3px 0 rgba(255,255,255,.5),inset 0 -3px 0 rgba(0,0,0,.35)"></div>
+                <div style="background:#ffe600;box-shadow:inset 0 3px 0 rgba(255,255,255,.5),inset 0 -3px 0 rgba(0,0,0,.35)"></div>
+                <div style="background:#ffe600;box-shadow:inset 0 3px 0 rgba(255,255,255,.5),inset 0 -3px 0 rgba(0,0,0,.35)"></div>
+              </div>
+            </div>
+            <div style="flex:1;height:80px;background:#cdc1a9;border:2px dashed #a89c85;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:8px;color:#8d8271"><span style="font-family:'DotGothic16',sans-serif;font-size:12px">♥</span> 2ND</div>
+          </div>
+        </div>
+
+        <div style="background:#23201c;border:3px solid #14120f;box-shadow:0 5px 0 #14120f;padding:14px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271;letter-spacing:.16em">EVENT STACK</span>
+            <span style="font-family:'Press Start 2P',monospace;font-size:9px;color:#ff2f92">BOMB</span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <div style="width:48px;height:48px;background:#ff2f92;display:flex;align-items:center;justify-content:center;font-size:26px;color:#180008;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4),0 0 22px rgba(255,47,146,.7);animation:dopaPulse 900ms ease-in-out infinite">●</div>
+            <div style="width:48px;height:48px;background:#ff2f92;display:flex;align-items:center;justify-content:center;font-size:26px;color:#180008;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4),0 0 22px rgba(255,47,146,.7);animation:dopaPulse 900ms ease-in-out infinite 120ms">●</div>
+            <div style="width:48px;height:48px;background:#ff2f92;display:flex;align-items:center;justify-content:center;font-size:26px;color:#180008;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4),0 0 22px rgba(255,47,146,.7);animation:dopaPulse 900ms ease-in-out infinite 240ms">●</div>
+            <div style="width:48px;height:48px;background:#2e2a24;border:2px solid #4a423a;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:8px;color:#6b6157">4</div>
+          </div>
+          <div style="font-size:15px;color:#e8dcc4;line-height:1.5">下層<span style="color:#ffe600">3列消去</span>＋フィーバー<span style="color:#ffe600">7秒</span></div>
+          <div style="height:10px;background:#14120f;position:relative;overflow:hidden">
+            <div style="position:absolute;inset:0 22% 0 0;background:linear-gradient(90deg,#00e5ff,#ff2f92)"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-family:'Press Start 2P',monospace;font-size:8px;color:#8d8271"><span>COOLDOWN</span><span>2.4s</span></div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="font-family:'Press Start 2P',monospace;font-size:8px;color:#8d8271;letter-spacing:.18em">KEY LOG</div>
+          <div style="display:flex;gap:6px">
+            <div style="padding:9px 11px;background:#23201c;color:#00e5ff;font-family:'Press Start 2P',monospace;font-size:10px;box-shadow:0 3px 0 #8d8271;animation:dopaPulse 700ms ease-in-out infinite">SPC</div>
+            <div style="padding:9px 11px;background:#e5dac3;border:2px solid #c3b69c;color:#8d8271;font-family:'Press Start 2P',monospace;font-size:10px">E</div>
+            <div style="padding:9px 11px;background:#e5dac3;border:2px solid #c3b69c;color:#8d8271;font-family:'Press Start 2P',monospace;font-size:10px">Q</div>
+            <div style="padding:9px 11px;background:#e5dac3;border:2px solid #c3b69c;color:#8d8271;font-family:'Press Start 2P',monospace;font-size:10px">SHIFT</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- board in cream bezel -->
+      <div style="position:absolute;left:50%;top:82px;transform:translateX(-50%);padding:16px;background:#302b25;border-radius:12px;box-shadow:inset 0 3px 0 rgba(255,255,255,.12),0 8px 0 #1d1a16">
+        <div style="position:relative;width:286px;height:566px;padding:3px;background:#07040c;border:3px solid #14181c;overflow:hidden">
+          <div style="position:absolute;inset:3px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.045) 0 1px,transparent 1px 28px),repeating-linear-gradient(rgba(255,255,255,.045) 0 1px,transparent 1px 28px)"></div>
+          <div style="position:absolute;inset:3px;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px);pointer-events:none;z-index:5"></div>
+          <div style="position:absolute;left:3px;right:3px;height:90px;background:linear-gradient(rgba(255,255,255,.045),rgba(255,255,255,0));animation:scanSoft 6.5s linear infinite;pointer-events:none;z-index:5"></div>
+
+          <div style="position:absolute;left:3px;top:3px;width:280px;height:560px;z-index:6">
+            <div style="position:absolute;left:84px;top:84px;width:26px;height:26px;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.5),inset 0 -4px 0 rgba(0,0,0,.4),0 0 18px rgba(168,85,255,.8)"></div>
+            <div style="position:absolute;left:112px;top:84px;width:26px;height:26px;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.5),inset 0 -4px 0 rgba(0,0,0,.4),0 0 18px rgba(168,85,255,.8)"></div>
+            <div style="position:absolute;left:140px;top:84px;width:26px;height:26px;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.5),inset 0 -4px 0 rgba(0,0,0,.4),0 0 18px rgba(168,85,255,.8)"></div>
+            <div style="position:absolute;left:112px;top:112px;width:26px;height:26px;background:#ffe600;display:flex;align-items:center;justify-content:center;font-size:16px;color:#2a2000;box-shadow:inset 0 4px 0 rgba(255,255,255,.55),inset 0 -4px 0 rgba(0,0,0,.35),0 0 22px rgba(255,230,0,.9);animation:dopaPulse 800ms ease-in-out infinite">♥</div>
+
+            <div style="position:absolute;left:84px;top:392px;width:26px;height:26px;border:2px solid rgba(0,229,255,.55);background:rgba(0,229,255,.1)"></div>
+            <div style="position:absolute;left:112px;top:392px;width:26px;height:26px;border:2px solid rgba(0,229,255,.55);background:rgba(0,229,255,.1)"></div>
+            <div style="position:absolute;left:140px;top:392px;width:26px;height:26px;border:2px solid rgba(0,229,255,.55);background:rgba(0,229,255,.1)"></div>
+            <div style="position:absolute;left:112px;top:420px;width:26px;height:26px;border:2px solid rgba(0,229,255,.55);background:rgba(0,229,255,.1)"></div>
+
+            <div style="position:absolute;left:0px;top:448px;width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:28px;top:448px;width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:252px;top:448px;width:26px;height:26px;background:#ff5a2f;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:0px;top:476px;width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:28px;top:476px;width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:56px;top:476px;width:26px;height:26px;background:#34d94b;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:168px;top:476px;width:26px;height:26px;background:#ff5a2f;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:252px;top:476px;width:26px;height:26px;background:#ff5a2f;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:0px;top:504px;width:26px;height:26px;background:#34d94b;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:28px;top:504px;width:26px;height:26px;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:56px;top:504px;width:26px;height:26px;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:140px;top:504px;width:26px;height:26px;background:#ffe600;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:168px;top:504px;width:26px;height:26px;background:#ffe600;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:252px;top:504px;width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:0px;top:532px;width:26px;height:26px;background:#ff5a2f;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:28px;top:532px;width:26px;height:26px;background:#ff5a2f;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:56px;top:532px;width:26px;height:26px;background:#ffe600;display:flex;align-items:center;justify-content:center;font-size:15px;color:#2a2000;box-shadow:inset 0 4px 0 rgba(255,255,255,.5),inset 0 -4px 0 rgba(0,0,0,.35)">◎</div>
+            <div style="position:absolute;left:84px;top:532px;width:26px;height:26px;background:#34d94b;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:112px;top:532px;width:26px;height:26px;background:#34d94b;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:140px;top:532px;width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:168px;top:532px;width:26px;height:26px;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:224px;top:532px;width:26px;height:26px;background:#ff2f92;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:252px;top:532px;width:26px;height:26px;background:#ff2f92;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+          </div>
+          <div style="position:absolute;left:87px;top:3px;width:82px;height:560px;background:linear-gradient(rgba(255,230,0,.2),rgba(255,230,0,0));pointer-events:none;z-index:7"></div>
+          <div style="position:absolute;left:120px;top:404px;width:16px;height:16px;background:#ffe600;box-shadow:0 0 18px #ffe600;pointer-events:none;z-index:7"></div>
+        </div>
+      </div>
+
+      <!-- right plate -->
+      <div style="position:absolute;right:26px;top:88px;width:250px;display:flex;flex-direction:column;gap:16px">
+        <div style="background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:14px">
+          <div style="font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271;letter-spacing:.18em;margin-bottom:12px">NEXT</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:#0f0a18;border-left:3px solid #ff2f92">
+              <div style="display:grid;grid-template-columns:repeat(4,16px);grid-auto-rows:16px;gap:2px">
+                <div style="background:#00e5ff"></div><div style="background:#00e5ff"></div><div style="background:#00e5ff"></div>
+                <div style="background:#ffe600;display:flex;align-items:center;justify-content:center;font-size:11px;color:#2a2000">♥</div>
+              </div>
+              <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:#ff2f92">I</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:#cdc1a9">
+              <div style="display:grid;grid-template-columns:repeat(3,14px);grid-auto-rows:14px;gap:2px">
+                <div></div><div style="background:#34d94b"></div><div style="background:#34d94b"></div>
+                <div style="background:#34d94b"></div><div style="background:#34d94b"></div><div></div>
+              </div>
+              <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:#5c5347">S</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:#cdc1a9;opacity:.8">
+              <div style="display:grid;grid-template-columns:repeat(3,14px);grid-auto-rows:14px;gap:2px">
+                <div style="background:#ff5a2f"></div><div></div><div></div>
+                <div style="background:#ff5a2f"></div><div style="background:#ff5a2f"></div><div style="background:#ff5a2f"></div>
+              </div>
+              <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:#5c5347">J</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:#23201c;border:3px solid #14120f;box-shadow:0 5px 0 #14120f;padding:16px;display:flex;flex-direction:column;gap:6px">
+          <div style="font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271;letter-spacing:.18em">SCORE</div>
+          <div style="font-family:'Press Start 2P',monospace;font-size:30px;color:#ffe600;text-shadow:0 0 22px rgba(255,230,0,.65)">184,250</div>
+          <div style="display:flex;justify-content:space-between;font-family:'Press Start 2P',monospace;font-size:8px;color:#8d8271;margin-top:4px"><span>LINES 62</span><span>×1.5 FEVER</span></div>
+        </div>
+
+        <div style="background:#c4116a;border:3px solid #7d0b43;box-shadow:0 5px 0 #7d0b43;padding:16px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:flex-end;gap:10px">
+            <span style="font-family:'Bungee',sans-serif;font-size:52px;line-height:.8;color:#fff;text-shadow:0 3px 0 #7d0b43">12</span>
+            <span style="font-family:'Press Start 2P',monospace;font-size:12px;color:#ffe600;padding-bottom:8px">COMBO</span>
+          </div>
+          <div style="height:12px;background:#7d0b43;position:relative;overflow:hidden">
+            <div style="position:absolute;inset:0 18% 0 0;background:repeating-linear-gradient(90deg,#ffe600 0 8px,#ff2f92 8px 16px)"></div>
+          </div>
+          <div style="font-size:14px;color:#ffd6e8">FEVER 7.0s / スコア×1.5 継続</div>
+        </div>
+      </div>
+
+      <div style="position:absolute;left:0;right:0;bottom:0;height:52px;background:#e5dac3;border-top:4px solid #c3b69c;display:flex;align-items:center;justify-content:space-between;padding:0 26px">
+        <div style="display:flex;gap:18px;font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271">
+          <span><span style="color:#c4116a">MOUSE</span> 追従</span>
+          <span><span style="color:#c4116a">A/D</span> 移動</span>
+          <span><span style="color:#c4116a">SPACE</span> HARD DROP</span>
+          <span><span style="color:#c4116a">E</span> STACK</span>
+        </div>
+        <div style="display:flex;gap:6px;align-items:flex-end;height:26px">
+          <div style="width:5px;background:#c4116a;animation:eq 480ms ease-in-out infinite"></div>
+          <div style="width:5px;background:#c4116a;animation:eq 620ms ease-in-out infinite"></div>
+          <div style="width:5px;background:#0090a8;animation:eq 380ms ease-in-out infinite"></div>
+          <div style="width:5px;background:#0090a8;animation:eq 540ms ease-in-out infinite"></div>
+          <div style="width:5px;background:#8d8271;animation:eq 700ms ease-in-out infinite"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 02 tokens ===== -->
+  <div style="display:flex;flex-direction:column;gap:22px">
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:3px solid #c3b69c;padding-bottom:12px">
+      <span style="font-family:'Press Start 2P',monospace;font-size:22px;color:#c4116a">02</span>
+      <span style="font-family:'Bungee',sans-serif;font-size:28px">TOKENS</span>
+      <span style="font-size:17px;color:#8d8271">色・タイポ・余白・枠線・発光</span>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:28px">
+      <div style="width:540px;background:#efe6d2;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:22px;display:flex;flex-direction:column;gap:16px">
+        <div style="font-family:'Press Start 2P',monospace;font-size:10px;letter-spacing:.18em;color:#8d8271">SURFACE / 筐体（発光しない）</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:44px;height:44px;background:#ded3bd;border:2px solid #b8ab92"></div><div><div style="font-family:'Press Start 2P',monospace;font-size:10px">#DED3BD</div><div style="font-size:14px;color:#8d8271">page / 背景</div></div></div>
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:44px;height:44px;background:#efe6d2;border:2px solid #b8ab92"></div><div><div style="font-family:'Press Start 2P',monospace;font-size:10px">#EFE6D2</div><div style="font-size:14px;color:#8d8271">plate</div></div></div>
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:44px;height:44px;background:#e5dac3;border:2px solid #b8ab92"></div><div><div style="font-family:'Press Start 2P',monospace;font-size:10px">#E5DAC3</div><div style="font-size:14px;color:#8d8271">panel</div></div></div>
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:44px;height:44px;background:#c3b69c"></div><div><div style="font-family:'Press Start 2P',monospace;font-size:10px">#C3B69C</div><div style="font-size:14px;color:#8d8271">border / 厚み影</div></div></div>
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:44px;height:44px;background:#8d8271"></div><div><div style="font-family:'Press Start 2P',monospace;font-size:10px">#8D8271</div><div style="font-size:14px;color:#8d8271">muted text</div></div></div>
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:44px;height:44px;background:#23201c"></div><div><div style="font-family:'Press Start 2P',monospace;font-size:10px">#23201C</div><div style="font-size:14px;color:#8d8271">ink / dark panel</div></div></div>
+        </div>
+        <div style="font-family:'Press Start 2P',monospace;font-size:10px;letter-spacing:.18em;color:#8d8271;margin-top:6px">SCREEN / ブラウン管内（ここだけ発光）</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:44px;height:44px;background:#07040c"></div><div><div style="font-family:'Press Start 2P',monospace;font-size:10px">#07040C</div><div style="font-size:14px;color:#8d8271">board bg</div></div></div>
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:44px;height:44px;background:#302b25;border-radius:8px"></div><div><div style="font-family:'Press Start 2P',monospace;font-size:10px">#302B25</div><div style="font-size:14px;color:#8d8271">bezel（r:12 / 影8px）</div></div></div>
+        </div>
+        <div style="padding:12px;background:#cdc1a9;font-size:15px;line-height:1.6;color:#3d372f">原則：クリーム面には <strong>glow禁止</strong>。厚み影 <code style="font-family:'Press Start 2P',monospace;font-size:11px">0 5px 0 #C3B69C</code> のみで立体を出す。</div>
+      </div>
+
+      <div style="width:540px;background:#23201c;border:3px solid #14120f;box-shadow:0 5px 0 #14120f;padding:22px;display:flex;flex-direction:column;gap:16px">
+        <div style="font-family:'Press Start 2P',monospace;font-size:10px;letter-spacing:.18em;color:#8d8271">NEON / アクセント（画面内・強調）</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:44px;height:44px;background:#ff2f92;box-shadow:0 0 20px rgba(255,47,146,.8)"></div><div><div style="font-family:'Press Start 2P',monospace;font-size:10px;color:#fff">#FF2F92</div><div style="font-size:14px;color:#8d8271">bomb / combo</div></div></div>
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:44px;height:44px;background:#00e5ff;box-shadow:0 0 20px rgba(0,229,255,.8)"></div><div><div style="font-family:'Press Start 2P',monospace;font-size:10px;color:#fff">#00E5FF</div><div style="font-size:14px;color:#8d8271">ghost / key</div></div></div>
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:44px;height:44px;background:#ffe600;box-shadow:0 0 20px rgba(255,230,0,.8)"></div><div><div style="font-family:'Press Start 2P',monospace;font-size:10px;color:#fff">#FFE600</div><div style="font-size:14px;color:#8d8271">score / coin / fever</div></div></div>
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:44px;height:44px;background:#34d94b;box-shadow:0 0 20px rgba(52,217,75,.8)"></div><div><div style="font-family:'Press Start 2P',monospace;font-size:10px;color:#fff">#34D94B</div><div style="font-size:14px;color:#8d8271">clover / OK</div></div></div>
+        </div>
+        <div style="font-family:'Press Start 2P',monospace;font-size:10px;letter-spacing:.18em;color:#8d8271;margin-top:6px">クリーム面上の可読アクセント（暗いバージョン）</div>
+        <div style="display:flex;gap:12px">
+          <div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;background:#c4116a"></div><span style="font-family:'Press Start 2P',monospace;font-size:10px;color:#fff">#C4116A</span></div>
+          <div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;background:#0090a8"></div><span style="font-family:'Press Start 2P',monospace;font-size:10px;color:#fff">#0090A8</span></div>
+        </div>
+        <div style="font-family:'Press Start 2P',monospace;font-size:10px;letter-spacing:.18em;color:#8d8271;margin-top:6px">GLOW 規則</div>
+        <div style="font-size:15px;line-height:1.8;color:#e8dcc4">
+          L1 待機 <code style="font-family:'Press Start 2P',monospace;font-size:11px;color:#00e5ff">0 0 12px 35%</code> ／ L2 有効 <code style="font-family:'Press Start 2P',monospace;font-size:11px;color:#ffe600">0 0 22px 70%</code> ／ L3 発動・フィーバー <code style="font-family:'Press Start 2P',monospace;font-size:11px;color:#ff2f92">0 0 44px 95%</code><br>ミノ本体は <strong>inset 0 4px 0 rgba(255,255,255,.45)</strong> ＋ <strong>inset 0 -4px 0 rgba(0,0,0,.4)</strong> 固定。イベントタイルのみ外側glow。
+        </div>
+      </div>
+
+      <div style="width:540px;background:#efe6d2;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:22px;display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'Press Start 2P',monospace;font-size:10px;letter-spacing:.18em;color:#8d8271">TYPE SCALE</div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:baseline;gap:14px;border-bottom:1px dashed #c3b69c;padding-bottom:10px"><span style="font-family:'Bungee',sans-serif;font-size:52px;line-height:.9">70 / 52</span><span style="font-size:15px;color:#8d8271">Bungee — COMBO・見出し・FEVER</span></div>
+          <div style="display:flex;align-items:baseline;gap:14px;border-bottom:1px dashed #c3b69c;padding-bottom:10px"><span style="font-family:'Press Start 2P',monospace;font-size:30px">30 / 26</span><span style="font-size:15px;color:#8d8271">Press Start 2P — スコア・数値</span></div>
+          <div style="display:flex;align-items:baseline;gap:14px;border-bottom:1px dashed #c3b69c;padding-bottom:10px"><span style="font-family:'Press Start 2P',monospace;font-size:12px">12 / 10 / 9 / 8</span><span style="font-size:15px;color:#8d8271">ラベル・キーキャップ（letter-spacing .16〜.2em）</span></div>
+          <div style="display:flex;align-items:baseline;gap:14px"><span style="font-family:'DotGothic16',sans-serif;font-size:20px">20 / 16 / 15 / 14</span><span style="font-size:15px;color:#8d8271">DotGothic16 — 日本語本文（line-height 1.6）</span></div>
+        </div>
+        <div style="font-family:'Press Start 2P',monospace;font-size:10px;letter-spacing:.18em;color:#8d8271;margin-top:8px">SPACING / GRID</div>
+        <div style="display:flex;gap:8px;align-items:flex-end">
+          <div style="width:6px;height:24px;background:#c4116a"></div><div style="width:8px;height:32px;background:#c4116a"></div><div style="width:12px;height:40px;background:#c4116a"></div><div style="width:16px;height:48px;background:#c4116a"></div><div style="width:22px;height:56px;background:#c4116a"></div><div style="width:26px;height:64px;background:#c4116a"></div>
+          <span style="font-family:'Press Start 2P',monospace;font-size:10px;color:#8d8271;margin-left:10px">6 · 8 · 12 · 16 · 22 · 26</span>
+        </div>
+        <div style="font-size:15px;line-height:1.7;color:#3d372f">セル28px（実体26＋隙間2）／盤面 10×20＝280×560／サイドパネル幅250／枠線は3px固定、角丸は<strong>ベゼルのみ12px</strong>、他は0。</div>
+      </div>
+
+      <div style="width:540px;background:#efe6d2;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:22px;display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'Press Start 2P',monospace;font-size:10px;letter-spacing:.18em;color:#8d8271">NOISE / 走査線ルール（弱め）</div>
+        <div style="display:flex;gap:16px;align-items:stretch">
+          <div style="position:relative;flex:1;height:130px;background:#07040c;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:4px">
+            <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px)"></div>
+            <div style="position:absolute;left:0;right:0;height:60px;background:linear-gradient(rgba(255,255,255,.045),rgba(255,255,255,0));animation:scanSoft 6.5s linear infinite"></div>
+            <div style="width:30px;height:30px;background:#00e5ff;z-index:2;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="width:30px;height:30px;background:#ffe600;z-index:2;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="width:30px;height:30px;background:#ff2f92;z-index:2;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+          </div>
+          <div style="flex:1;font-size:15px;line-height:1.75;color:#3d372f">
+            <strong>OK</strong>：<code style="font-family:'Press Start 2P',monospace;font-size:10px">rgba(0,0,0,.14) 1px / 4px</code> の横線を盤面背景のみに。加えて 6.5s のソフトスキャン光。<br><br>
+            <strong>NG</strong>：ミノ・イベントタイル・クリーム面へのノイズ重ね（z-index でミノを上に置く）。画面全体を覆う濃い黒線は廃止。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 03 tiles ===== -->
+  <div style="display:flex;flex-direction:column;gap:22px">
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:3px solid #c3b69c;padding-bottom:12px">
+      <span style="font-family:'Press Start 2P',monospace;font-size:22px;color:#c4116a">03</span>
+      <span style="font-family:'Bungee',sans-serif;font-size:28px">TILES</span>
+      <span style="font-size:17px;color:#8d8271">ミノ7種＋イベントスタック4種</span>
+    </div>
+
+    <div style="background:#23201c;border:3px solid #14120f;box-shadow:0 5px 0 #14120f;padding:26px;display:flex;flex-wrap:wrap;gap:36px">
+      <div style="display:flex;gap:26px;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div style="display:grid;grid-template-columns:repeat(4,22px);grid-auto-rows:22px;gap:2px"><div style="background:#00e5ff;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div style="background:#00e5ff;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div style="background:#00e5ff;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div style="background:#00e5ff;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div></div><span style="font-family:'Press Start 2P',monospace;font-size:10px;color:#00e5ff">I</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div style="display:grid;grid-template-columns:repeat(2,22px);grid-auto-rows:22px;gap:2px"><div style="background:#ffe600;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div style="background:#ffe600;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div style="background:#ffe600;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div style="background:#ffe600;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div></div><span style="font-family:'Press Start 2P',monospace;font-size:10px;color:#ffe600">O</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div style="display:grid;grid-template-columns:repeat(3,22px);grid-auto-rows:22px;gap:2px"><div></div><div style="background:#a855ff;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div></div><div style="background:#a855ff;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div style="background:#a855ff;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div style="background:#a855ff;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div></div><span style="font-family:'Press Start 2P',monospace;font-size:10px;color:#a855ff">T</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div style="display:grid;grid-template-columns:repeat(3,22px);grid-auto-rows:22px;gap:2px"><div></div><div style="background:#34d94b;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div style="background:#34d94b;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div style="background:#34d94b;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div style="background:#34d94b;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div></div></div><span style="font-family:'Press Start 2P',monospace;font-size:10px;color:#34d94b">S</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div style="display:grid;grid-template-columns:repeat(3,22px);grid-auto-rows:22px;gap:2px"><div style="background:#ff5a2f;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div style="background:#ff5a2f;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div></div><div></div><div style="background:#ff5a2f;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div style="background:#ff5a2f;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div></div><span style="font-family:'Press Start 2P',monospace;font-size:10px;color:#ff5a2f">Z</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div style="display:grid;grid-template-columns:repeat(3,22px);grid-auto-rows:22px;gap:2px"><div style="background:#3a7bff;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div></div><div></div><div style="background:#3a7bff;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div style="background:#3a7bff;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div style="background:#3a7bff;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div></div><span style="font-family:'Press Start 2P',monospace;font-size:10px;color:#3a7bff">J</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div style="display:grid;grid-template-columns:repeat(3,22px);grid-auto-rows:22px;gap:2px"><div></div><div></div><div style="background:#ff2f92;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div style="background:#ff2f92;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div style="background:#ff2f92;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div><div style="background:#ff2f92;box-shadow:inset 0 3px 0 rgba(255,255,255,.45),inset 0 -3px 0 rgba(0,0,0,.4)"></div></div><span style="font-family:'Press Start 2P',monospace;font-size:10px;color:#ff2f92">L</span></div>
+      </div>
+
+      <div style="width:2px;background:#3a332c"></div>
+
+      <div style="display:flex;gap:24px;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div style="width:54px;height:54px;background:#ff2f92;display:flex;align-items:center;justify-content:center;font-size:28px;color:#180008;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4),0 0 24px rgba(255,47,146,.8);animation:dopaPulse 900ms ease-in-out infinite">●</div><span style="font-family:'Press Start 2P',monospace;font-size:9px;color:#ff2f92">BOMB</span><span style="font-size:14px;color:#8d8271">列消去＋FEVER</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div style="width:54px;height:54px;background:#ff5a7a;display:flex;align-items:center;justify-content:center;font-size:26px;color:#3a000c;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4),0 0 24px rgba(255,90,122,.8);animation:dopaPulse 1100ms ease-in-out infinite">♥</div><span style="font-family:'Press Start 2P',monospace;font-size:9px;color:#ff5a7a">HEART</span><span style="font-size:14px;color:#8d8271">HOLD拡張／重力</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div style="width:54px;height:54px;background:#ffe600;display:flex;align-items:center;justify-content:center;font-size:26px;color:#2a2000;box-shadow:inset 0 4px 0 rgba(255,255,255,.5),inset 0 -4px 0 rgba(0,0,0,.35),0 0 24px rgba(255,230,0,.85);animation:dopaPulse 1000ms ease-in-out infinite">◎</div><span style="font-family:'Press Start 2P',monospace;font-size:9px;color:#ffe600">COIN</span><span style="font-size:14px;color:#8d8271">落下速度低下</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div style="width:54px;height:54px;background:#34d94b;display:flex;align-items:center;justify-content:center;font-size:26px;color:#062d0c;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4),0 0 24px rgba(52,217,75,.8);animation:dopaPulse 1200ms ease-in-out infinite">✦</div><span style="font-family:'Press Start 2P',monospace;font-size:9px;color:#34d94b">CLOVER</span><span style="font-size:14px;color:#8d8271">長時間FEVER＋倍率</span></div>
+        <div style="width:290px;font-size:15px;line-height:1.7;color:#e8dcc4;align-self:center">イベントタイルは<strong>ミノ内1枚のみ</strong>。地色はミノ色を上書きし、記号は<strong>暗色</strong>（コントラスト確保）。待機時 0.9〜1.2s の呼吸パルス、消去対象になった瞬間 L3 glow に上げる。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 04 motion ===== -->
+  <div style="display:flex;flex-direction:column;gap:22px">
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:3px solid #c3b69c;padding-bottom:12px">
+      <span style="font-family:'Press Start 2P',monospace;font-size:22px;color:#c4116a">04</span>
+      <span style="font-family:'Bungee',sans-serif;font-size:28px">MOTION</span>
+      <span style="font-size:17px;color:#8d8271">下のデモはすべてループ再生。数値はそのまま実装値。</span>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:28px">
+
+      <!-- line clear -->
+      <div style="width:548px;background:#efe6d2;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#c4116a">A</span><span style="font-family:'Bungee',sans-serif;font-size:20px">ライン消去：左から1個ずつポップ</span></div>
+        <div style="position:relative;background:#07040c;padding:22px 16px;overflow:hidden">
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px)"></div>
+          <div style="position:relative;display:flex;gap:2px;justify-content:center">
+            <div style="position:relative;width:26px;height:26px"><div style="position:absolute;inset:0;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:popClear 2.6s cubic-bezier(.2,1.5,.35,1) infinite 0ms"></div><div style="position:absolute;inset:-6px;border:2px solid #fff;animation:popSpark 2.6s ease-out infinite 0ms"></div></div>
+            <div style="position:relative;width:26px;height:26px"><div style="position:absolute;inset:0;background:#ffe600;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:popClear 2.6s cubic-bezier(.2,1.5,.35,1) infinite 45ms"></div><div style="position:absolute;inset:-6px;border:2px solid #fff;animation:popSpark 2.6s ease-out infinite 45ms"></div></div>
+            <div style="position:relative;width:26px;height:26px"><div style="position:absolute;inset:0;background:#ff2f92;display:flex;align-items:center;justify-content:center;font-size:15px;color:#180008;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:popClear 2.6s cubic-bezier(.2,1.5,.35,1) infinite 90ms">●</div><div style="position:absolute;inset:-6px;border:2px solid #fff;animation:popSpark 2.6s ease-out infinite 90ms"></div></div>
+            <div style="position:relative;width:26px;height:26px"><div style="position:absolute;inset:0;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:popClear 2.6s cubic-bezier(.2,1.5,.35,1) infinite 135ms"></div><div style="position:absolute;inset:-6px;border:2px solid #fff;animation:popSpark 2.6s ease-out infinite 135ms"></div></div>
+            <div style="position:relative;width:26px;height:26px"><div style="position:absolute;inset:0;background:#34d94b;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:popClear 2.6s cubic-bezier(.2,1.5,.35,1) infinite 180ms"></div><div style="position:absolute;inset:-6px;border:2px solid #fff;animation:popSpark 2.6s ease-out infinite 180ms"></div></div>
+            <div style="position:relative;width:26px;height:26px"><div style="position:absolute;inset:0;background:#ff5a2f;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:popClear 2.6s cubic-bezier(.2,1.5,.35,1) infinite 225ms"></div><div style="position:absolute;inset:-6px;border:2px solid #fff;animation:popSpark 2.6s ease-out infinite 225ms"></div></div>
+            <div style="position:relative;width:26px;height:26px"><div style="position:absolute;inset:0;background:#3a7bff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:popClear 2.6s cubic-bezier(.2,1.5,.35,1) infinite 270ms"></div><div style="position:absolute;inset:-6px;border:2px solid #fff;animation:popSpark 2.6s ease-out infinite 270ms"></div></div>
+            <div style="position:relative;width:26px;height:26px"><div style="position:absolute;inset:0;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:popClear 2.6s cubic-bezier(.2,1.5,.35,1) infinite 315ms"></div><div style="position:absolute;inset:-6px;border:2px solid #fff;animation:popSpark 2.6s ease-out infinite 315ms"></div></div>
+            <div style="position:relative;width:26px;height:26px"><div style="position:absolute;inset:0;background:#ffe600;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:popClear 2.6s cubic-bezier(.2,1.5,.35,1) infinite 360ms"></div><div style="position:absolute;inset:-6px;border:2px solid #fff;animation:popSpark 2.6s ease-out infinite 360ms"></div></div>
+            <div style="position:relative;width:26px;height:26px"><div style="position:absolute;inset:0;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:popClear 2.6s cubic-bezier(.2,1.5,.35,1) infinite 405ms"></div><div style="position:absolute;inset:-6px;border:2px solid #fff;animation:popSpark 2.6s ease-out infinite 405ms"></div></div>
+          </div>
+        </div>
+        <div style="font-size:15px;line-height:1.8;color:#3d372f">
+          列ごとの遅延 <strong>45ms</strong>（左→右）／1セル <strong>210ms</strong> <code style="font-family:'Press Start 2P',monospace;font-size:10px">cubic-bezier(.2,1.5,.35,1)</code><br>
+          scale 1 → <strong>1.34</strong>（brightness 2.6・白リング拡散）→ 0 に潰れて消滅。10列で <strong>約620ms</strong>。<br>
+          消滅後の段落下：<strong>230ms</strong> <code style="font-family:'Press Start 2P',monospace;font-size:10px">cubic-bezier(.22,1,.36,1)</code>、9%のオーバーシュート付き。<br>
+          <span style="color:#c4116a">※ここでの「最初に消えた列＝左端」がイベントスタック種別の判定基準。</span>
+        </div>
+      </div>
+
+      <!-- hard drop -->
+      <div style="width:548px;background:#efe6d2;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#c4116a">B</span><span style="font-family:'Bungee',sans-serif;font-size:20px">ハードドロップ：ドン＋スプラッシュ</span></div>
+        <div style="position:relative;height:230px;background:#07040c;overflow:hidden">
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px)"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;height:28px;background:repeating-linear-gradient(90deg,#2b2340 0 26px,#07040c 26px 28px)"></div>
+          <div style="position:absolute;left:50%;bottom:28px;transform:translateX(-50%);width:82px;height:56px;transform-origin:bottom center;animation:dropSlam 2.2s cubic-bezier(.36,0,.66,-.2) infinite">
+            <div style="position:absolute;left:0;top:0;width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:28px;top:0;width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:56px;top:0;width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:28px;top:28px;width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+          </div>
+          <div style="position:absolute;left:50%;bottom:26px;transform:translateX(-50%);width:190px;height:5px;background:linear-gradient(90deg,rgba(0,229,255,0),#fff,rgba(0,229,255,0));animation:slamShock 2.2s ease-out infinite"></div>
+          <div style="position:absolute;left:50%;bottom:34px;width:8px;height:8px;background:#ffe600;--sx:-84px;--sy:-58px;animation:splashOut 2.2s cubic-bezier(.15,.9,.3,1) infinite"></div>
+          <div style="position:absolute;left:50%;bottom:34px;width:8px;height:8px;background:#00e5ff;--sx:-46px;--sy:-78px;animation:splashOut 2.2s cubic-bezier(.15,.9,.3,1) infinite"></div>
+          <div style="position:absolute;left:50%;bottom:34px;width:6px;height:6px;background:#fff;--sx:6px;--sy:-88px;animation:splashOut 2.2s cubic-bezier(.15,.9,.3,1) infinite"></div>
+          <div style="position:absolute;left:50%;bottom:34px;width:8px;height:8px;background:#ff2f92;--sx:52px;--sy:-70px;animation:splashOut 2.2s cubic-bezier(.15,.9,.3,1) infinite"></div>
+          <div style="position:absolute;left:50%;bottom:34px;width:8px;height:8px;background:#ffe600;--sx:92px;--sy:-44px;animation:splashOut 2.2s cubic-bezier(.15,.9,.3,1) infinite"></div>
+        </div>
+        <div style="font-size:15px;line-height:1.8;color:#3d372f">
+          落下 <strong>110ms</strong> <code style="font-family:'Press Start 2P',monospace;font-size:10px">cubic-bezier(.36,0,.66,-.2)</code>（加速感）＋落下軌跡の残像トレイル 90ms。<br>
+          着地スカッシュ <strong>scaleY .70 / scaleX 1.20 → 1.10 → 1.00</strong>、計 <strong>260ms</strong>。<br>
+          衝撃波：横一直線に <strong>140ms</strong> で拡散。破片 <strong>5〜9個</strong>を <strong>420ms</strong> ease-out で放射（重力で落ちる）。<br>
+          画面シェイク <strong>6px / 110ms</strong>。
+        </div>
+      </div>
+
+      <!-- bomb -->
+      <div style="width:548px;background:#efe6d2;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#c4116a">C</span><span style="font-family:'Bungee',sans-serif;font-size:20px">爆弾：左→右へ爆ぜていく</span></div>
+        <div style="position:relative;height:230px;background:#07040c;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;padding:16px;gap:2px">
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px)"></div>
+          <div style="position:absolute;inset:0;background:radial-gradient(circle at 20% 70%,#fff,rgba(255,255,255,0) 60%);animation:flashOut 2.8s ease-out infinite;z-index:4"></div>
+          <div style="position:relative;display:flex;gap:2px;justify-content:center">
+            <div style="width:26px;height:26px;background:#3a7bff;--ex:-40px;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:explodeCell 2.8s cubic-bezier(.15,.85,.25,1) infinite 0ms"></div>
+            <div style="width:26px;height:26px;background:#ffe600;--ex:-30px;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:explodeCell 2.8s cubic-bezier(.15,.85,.25,1) infinite 26ms"></div>
+            <div style="width:26px;height:26px;background:#34d94b;--ex:-18px;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:explodeCell 2.8s cubic-bezier(.15,.85,.25,1) infinite 52ms"></div>
+            <div style="width:26px;height:26px;background:#ff2f92;--ex:-8px;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:explodeCell 2.8s cubic-bezier(.15,.85,.25,1) infinite 78ms"></div>
+            <div style="width:26px;height:26px;background:#00e5ff;--ex:4px;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:explodeCell 2.8s cubic-bezier(.15,.85,.25,1) infinite 104ms"></div>
+            <div style="width:26px;height:26px;background:#a855ff;--ex:14px;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:explodeCell 2.8s cubic-bezier(.15,.85,.25,1) infinite 130ms"></div>
+            <div style="width:26px;height:26px;background:#ff5a2f;--ex:26px;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:explodeCell 2.8s cubic-bezier(.15,.85,.25,1) infinite 156ms"></div>
+            <div style="width:26px;height:26px;background:#ffe600;--ex:36px;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:explodeCell 2.8s cubic-bezier(.15,.85,.25,1) infinite 182ms"></div>
+            <div style="width:26px;height:26px;background:#34d94b;--ex:46px;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:explodeCell 2.8s cubic-bezier(.15,.85,.25,1) infinite 208ms"></div>
+            <div style="width:26px;height:26px;background:#3a7bff;--ex:58px;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:explodeCell 2.8s cubic-bezier(.15,.85,.25,1) infinite 234ms"></div>
+          </div>
+          <div style="position:relative;display:flex;gap:2px;justify-content:center">
+            <div style="width:26px;height:26px;background:#ff2f92;--ex:-44px;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:explodeCell 2.8s cubic-bezier(.15,.85,.25,1) infinite 14ms"></div>
+            <div style="width:26px;height:26px;background:#00e5ff;--ex:-32px;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:explodeCell 2.8s cubic-bezier(.15,.85,.25,1) infinite 40ms"></div>
+            <div style="width:26px;height:26px;background:#ffe600;--ex:-20px;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:explodeCell 2.8s cubic-bezier(.15,.85,.25,1) infinite 66ms"></div>
+            <div style="width:26px;height:26px;background:#a855ff;--ex:-10px;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:explodeCell 2.8s cubic-bezier(.15,.85,.25,1) infinite 92ms"></div>
+            <div style="width:26px;height:26px;background:#34d94b;--ex:2px;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:explodeCell 2.8s cubic-bezier(.15,.85,.25,1) infinite 118ms"></div>
+            <div style="width:26px;height:26px;background:#ff5a2f;--ex:12px;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:explodeCell 2.8s cubic-bezier(.15,.85,.25,1) infinite 144ms"></div>
+            <div style="width:26px;height:26px;background:#3a7bff;--ex:24px;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:explodeCell 2.8s cubic-bezier(.15,.85,.25,1) infinite 170ms"></div>
+            <div style="width:26px;height:26px;background:#ff2f92;--ex:34px;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:explodeCell 2.8s cubic-bezier(.15,.85,.25,1) infinite 196ms"></div>
+            <div style="width:26px;height:26px;background:#ffe600;--ex:44px;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:explodeCell 2.8s cubic-bezier(.15,.85,.25,1) infinite 222ms"></div>
+            <div style="width:26px;height:26px;background:#00e5ff;--ex:56px;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:explodeCell 2.8s cubic-bezier(.15,.85,.25,1) infinite 248ms"></div>
+          </div>
+        </div>
+        <div style="font-size:15px;line-height:1.8;color:#3d372f">
+          発火は<strong>左下端セル</strong>から。列遅延 <strong>26ms</strong>、行遅延 <strong>14ms</strong>で右上へ波及。<br>
+          セルごと：白フラッシュ 60ms → 飛散 <strong>420ms</strong> <code style="font-family:'Press Start 2P',monospace;font-size:10px">cubic-bezier(.15,.85,.25,1)</code>（回転320°＋落下）。<br>
+          全画面フラッシュ <strong>70ms / 最大85%</strong>（左20%を中心にした放射）。シェイクは消去列数に連動（下表）。
+        </div>
+      </div>
+
+      <!-- gravity -->
+      <div style="width:548px;background:#efe6d2;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#c4116a">D</span><span style="font-family:'Bungee',sans-serif;font-size:20px">重力（ハート3）：隙間が埋まる</span></div>
+        <div style="position:relative;height:230px;background:#07040c;overflow:hidden;padding:16px">
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px)"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;height:6px;background:#2b2340"></div>
+          <div style="position:absolute;left:24px;bottom:6px;width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:gravFall 2.4s cubic-bezier(.34,1.3,.5,1) infinite 0ms"></div>
+          <div style="position:absolute;left:52px;bottom:6px;width:26px;height:26px;background:#ffe600;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:gravFall 2.4s cubic-bezier(.34,1.3,.5,1) infinite 32ms"></div>
+          <div style="position:absolute;left:80px;bottom:6px;width:26px;height:26px;background:#ff2f92;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:gravFall 2.4s cubic-bezier(.34,1.3,.5,1) infinite 64ms"></div>
+          <div style="position:absolute;left:108px;bottom:6px;width:26px;height:26px;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:gravFall 2.4s cubic-bezier(.34,1.3,.5,1) infinite 96ms"></div>
+          <div style="position:absolute;left:136px;bottom:6px;width:26px;height:26px;background:#34d94b;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:gravFall 2.4s cubic-bezier(.34,1.3,.5,1) infinite 128ms"></div>
+          <div style="position:absolute;left:164px;bottom:6px;width:26px;height:26px;background:#ff5a2f;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:gravFall 2.4s cubic-bezier(.34,1.3,.5,1) infinite 160ms"></div>
+          <div style="position:absolute;left:192px;bottom:6px;width:26px;height:26px;background:#3a7bff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:gravFall 2.4s cubic-bezier(.34,1.3,.5,1) infinite 192ms"></div>
+          <div style="position:absolute;left:24px;bottom:34px;width:26px;height:26px;background:#ff2f92;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:gravFall 2.4s cubic-bezier(.34,1.3,.5,1) infinite 20ms"></div>
+          <div style="position:absolute;left:80px;bottom:34px;width:26px;height:26px;background:#ffe600;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:gravFall 2.4s cubic-bezier(.34,1.3,.5,1) infinite 84ms"></div>
+          <div style="position:absolute;left:136px;bottom:34px;width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:gravFall 2.4s cubic-bezier(.34,1.3,.5,1) infinite 148ms"></div>
+          <div style="position:absolute;right:16px;top:16px;padding:8px 10px;background:#ff5a7a;color:#3a000c;font-family:'Press Start 2P',monospace;font-size:10px;animation:dopaPulse 900ms ease-in-out infinite"><span style="font-family:'DotGothic16',sans-serif;font-size:14px">♥</span>×3 GRAVITY</div>
+        </div>
+        <div style="font-size:15px;line-height:1.8;color:#3d372f">
+          列ごとに左→右 <strong>32ms</strong> ずらして落下。1ブロック <strong>270ms</strong> <code style="font-family:'Press Start 2P',monospace;font-size:10px">cubic-bezier(.34,1.3,.5,1)</code>、着地時に <strong>9px</strong> の小バウンド。<br>
+          落下距離が長いブロックほど残像を濃く（opacity .35 → 0、120ms）。完了後に連鎖判定 → ライン消去Aへ。
+        </div>
+      </div>
+
+      <!-- fever -->
+      <div style="width:548px;background:#efe6d2;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#c4116a">E</span><span style="font-family:'Bungee',sans-serif;font-size:20px">フィーバー：全UIが跳ねる超派手状態</span></div>
+        <div style="position:relative;height:230px;background:#07040c;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px)"></div>
+          <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 60%,rgba(255,47,146,.35),rgba(255,47,146,0) 65%);animation:dopaPulse 690ms ease-in-out infinite"></div>
+          <div style="position:relative;display:flex;align-items:center;gap:12px;padding:10px 20px;background:linear-gradient(90deg,#ff2f92,#ffe600);animation:dopaPulse 690ms ease-in-out infinite">
+            <span style="font-family:'Bungee',sans-serif;font-size:24px;color:#1a0010">FEVER TIME</span>
+            <span style="font-family:'Press Start 2P',monospace;font-size:16px;color:#1a0010">9.0</span>
+          </div>
+          <div style="position:relative;display:flex;gap:14px">
+            <div style="width:40px;height:40px;background:#ffe600;display:flex;align-items:center;justify-content:center;font-size:22px;color:#2a2000;animation:feverBounce 460ms cubic-bezier(.3,1.5,.4,1) infinite 0ms">◎</div>
+            <div style="width:40px;height:40px;background:#ffe600;display:flex;align-items:center;justify-content:center;font-size:22px;color:#2a2000;animation:feverBounce 460ms cubic-bezier(.3,1.5,.4,1) infinite 70ms">◎</div>
+            <div style="width:40px;height:40px;background:#ffe600;display:flex;align-items:center;justify-content:center;font-size:22px;color:#2a2000;animation:feverBounce 460ms cubic-bezier(.3,1.5,.4,1) infinite 140ms">◎</div>
+            <div style="width:40px;height:40px;background:#ff2f92;display:flex;align-items:center;justify-content:center;font-size:22px;color:#180008;animation:feverBounce 460ms cubic-bezier(.3,1.5,.4,1) infinite 210ms">●</div>
+            <div style="width:40px;height:40px;background:#34d94b;display:flex;align-items:center;justify-content:center;font-size:22px;color:#062d0c;animation:feverBounce 460ms cubic-bezier(.3,1.5,.4,1) infinite 280ms">✦</div>
+          </div>
+          <div style="position:relative;display:flex;gap:10px;align-items:center">
+            <div style="padding:8px 12px;background:#23201c;color:#ffe600;font-family:'Press Start 2P',monospace;font-size:11px;animation:feverGlow 690ms ease-in-out infinite">×1.5</div>
+            <div style="padding:8px 12px;background:#23201c;color:#00e5ff;font-family:'Press Start 2P',monospace;font-size:11px;animation:blink 345ms steps(1) infinite">COMBO KEEP</div>
+            <div style="display:flex;align-items:flex-end;gap:4px;height:34px">
+              <div style="width:6px;background:#ff2f92;animation:eq 345ms ease-in-out infinite"></div>
+              <div style="width:6px;background:#ffe600;animation:eq 460ms ease-in-out infinite"></div>
+              <div style="width:6px;background:#00e5ff;animation:eq 290ms ease-in-out infinite"></div>
+              <div style="width:6px;background:#34d94b;animation:eq 400ms ease-in-out infinite"></div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:15px;line-height:1.8;color:#3d372f">
+          突入：バナーが <strong>260ms</strong> overshoot でスラムイン＋全画面フラッシュ 80ms＋シェイク 10px。<br>
+          継続中：全UIが <strong>460ms</strong> 周期で <strong>-16px</strong> 跳ね（要素ごと70ms遅延でウェーブ）、点滅は <strong>345ms</strong> steps(1) に加速、glowはL3、盤面背景に赤紫の脈動。<br>
+          終了：<strong>600ms</strong> かけて振幅・glowを減衰、最後の1秒はカウントが赤点滅。<br>
+          <span style="color:#c4116a">※GPU負荷対策：跳ねは transform のみ、点滅は opacity のみ。box-shadowアニメは同時5要素まで。</span>
+        </div>
+      </div>
+
+      <!-- combo -->
+      <div style="width:548px;background:#efe6d2;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#c4116a">F</span><span style="font-family:'Bungee',sans-serif;font-size:20px">コンボ加算：重なるほど文字が巨大化</span></div>
+        <div style="position:relative;height:230px;background:#07040c;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:26px">
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px)"></div>
+          <div style="position:relative;display:flex;align-items:baseline;gap:10px">
+            <span style="font-family:'Bungee',sans-serif;font-size:96px;line-height:.85;color:#fff;text-shadow:0 0 30px rgba(255,47,146,.9),0 5px 0 #7d0b43;animation:comboPop 1.8s cubic-bezier(.2,1.6,.3,1) infinite">12</span>
+            <span style="font-family:'Press Start 2P',monospace;font-size:14px;color:#ff2f92">COMBO</span>
+            <div style="position:absolute;left:50%;top:-10px;transform:translateX(-50%);font-family:'Press Start 2P',monospace;font-size:16px;color:#ffe600;white-space:nowrap;animation:comboRise 1.8s ease-out infinite">+1  ×1.15</div>
+          </div>
+          <div style="position:relative;display:flex;flex-direction:column;gap:8px;font-family:'Press Start 2P',monospace">
+            <div style="display:flex;align-items:center;gap:10px"><span style="font-size:16px;color:#8d8271">1-4</span><span style="font-size:20px;color:#fff">44px</span></div>
+            <div style="display:flex;align-items:center;gap:10px"><span style="font-size:16px;color:#8d8271">5-9</span><span style="font-size:26px;color:#00e5ff">60px</span></div>
+            <div style="display:flex;align-items:center;gap:10px"><span style="font-size:16px;color:#8d8271">10-19</span><span style="font-size:32px;color:#ffe600">78px</span></div>
+            <div style="display:flex;align-items:center;gap:10px"><span style="font-size:16px;color:#8d8271">20+</span><span style="font-size:38px;color:#ff2f92;animation:blink 345ms steps(1) infinite">96px</span></div>
+          </div>
+        </div>
+        <div style="font-size:15px;line-height:1.8;color:#3d372f">
+          加算ごとに数字が <strong>scale 1 → 1.5 → .94 → 1</strong>（<strong>260ms</strong> <code style="font-family:'Press Start 2P',monospace;font-size:10px">cubic-bezier(.2,1.6,.3,1)</code>）＋±4°の首振り。<br>
+          <strong>+1 ×倍率</strong>のポップは上方向へ <strong>560ms</strong> ease-out でライズ＆フェード。<br>
+          段階でベースサイズと色を昇格（右表）。20コンボ以降は文字自体が 345ms で点滅、背景に集中線1フレーム。
+        </div>
+      </div>
+
+      <!-- shake table -->
+      <div style="width:548px;background:#23201c;border:3px solid #14120f;box-shadow:0 5px 0 #14120f;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#ffe600">G</span><span style="font-family:'Bungee',sans-serif;font-size:20px;color:#fff">画面シェイク量</span></div>
+        <div style="position:relative;height:150px;background:#07040c;overflow:hidden;display:flex;align-items:center;justify-content:center">
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px)"></div>
+          <div style="display:flex;gap:2px;padding:14px;border:3px solid #3a2554;background:#0f0a18;animation:shakeHard 2.4s cubic-bezier(.3,.8,.4,1) infinite">
+            <div style="width:22px;height:22px;background:#00e5ff"></div><div style="width:22px;height:22px;background:#ffe600"></div><div style="width:22px;height:22px;background:#ff2f92"></div><div style="width:22px;height:22px;background:#34d94b"></div><div style="width:22px;height:22px;background:#a855ff"></div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:15px;color:#e8dcc4">
+          <div style="display:flex;justify-content:space-between;border-bottom:1px dashed #3a332c;padding-bottom:6px"><span>1列消去</span><span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#8d8271">4px / 90ms</span></div>
+          <div style="display:flex;justify-content:space-between;border-bottom:1px dashed #3a332c;padding-bottom:6px"><span>2列</span><span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#00e5ff">8px / 140ms</span></div>
+          <div style="display:flex;justify-content:space-between;border-bottom:1px dashed #3a332c;padding-bottom:6px"><span>3列</span><span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#34d94b">13px / 200ms</span></div>
+          <div style="display:flex;justify-content:space-between;border-bottom:1px dashed #3a332c;padding-bottom:6px"><span>4列（TETRIS）</span><span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#ffe600">20px / 300ms ＋ 回転0.7°</span></div>
+          <div style="display:flex;justify-content:space-between;border-bottom:1px dashed #3a332c;padding-bottom:6px"><span>爆弾3〜4</span><span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#ff2f92">26px / 380ms ＋ 回転1.0°</span></div>
+          <div style="display:flex;justify-content:space-between"><span>ハードドロップ着地</span><span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#8d8271">6px / 110ms</span></div>
+        </div>
+        <div style="font-size:14px;line-height:1.7;color:#8d8271">減衰は振幅を毎回 <strong>×0.62</strong>。シェイクは<strong>盤面ラッパー</strong>にのみ適用し、クリーム筐体とHUDは固定（酔い対策）。設定に「画面揺れ 0〜150%」スライダを用意。</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== 05 implementation notes ===== -->
+  <div style="display:flex;flex-direction:column;gap:22px">
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:3px solid #c3b69c;padding-bottom:12px">
+      <span style="font-family:'Press Start 2P',monospace;font-size:22px;color:#c4116a">05</span>
+      <span style="font-family:'Bungee',sans-serif;font-size:28px">NOTES</span>
+      <span style="font-size:17px;color:#8d8271">実装の前提</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:20px">
+      <div style="width:352px;background:#efe6d2;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:20px;font-size:15px;line-height:1.8;color:#3d372f">
+        <div style="font-family:'Press Start 2P',monospace;font-size:10px;color:#c4116a;letter-spacing:.16em;margin-bottom:10px">PERFORMANCE</div>
+        アニメは <strong>transform / opacity / filter</strong> のみ。同時パーティクル上限 <strong>120個</strong>、超過分は破棄。60fps維持を優先し、フィーバー＋爆発同時発火時はパーティクルを50%間引き。<code style="font-family:'Press Start 2P',monospace;font-size:10px">prefers-reduced-motion</code> で振幅・点滅を1/4に。
+      </div>
+      <div style="width:352px;background:#efe6d2;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:20px;font-size:15px;line-height:1.8;color:#3d372f">
+        <div style="font-family:'Press Start 2P',monospace;font-size:10px;color:#c4116a;letter-spacing:.16em;margin-bottom:10px">TIMING BASE</div>
+        全モーションは <strong>BPM 174（1拍 ≒ 345ms）</strong>を基準グリッドに。UI跳ね=1/2拍、点滅=1拍、フィーバー脈動=2拍。ゲーム進行と演出のテンポを揃えて音ゲー感を作る。
+      </div>
+      <div style="width:352px;background:#efe6d2;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:20px;font-size:15px;line-height:1.8;color:#3d372f">
+        <div style="font-family:'Press Start 2P',monospace;font-size:10px;color:#c4116a;letter-spacing:.16em;margin-bottom:10px">SOUND HOOK（後日）</div>
+        発火点だけ先に確定：<strong>移動 / 回転 / ソフト着地 / ハードドロップ / 各列ポップ（左→右で音程上昇）/ 爆発 / 重力着地 / フィーバー突入・終了 / コンボ加算（段階でピッチ+）</strong>。実装時にフックを空関数で用意しておく。
+      </div>
+    </div>
+  </div>
+
+</section>
+</x-dc>
+</body>
+</html>

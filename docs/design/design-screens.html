@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DotGothic16&family=Bungee&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#ded3bd; }
+  *, *::before, *::after { box-sizing:border-box; }
+  a { color:#c4116a; text-decoration:none; border-bottom:1px solid rgba(196,17,106,.4); }
+  a:hover { color:#0090a8; border-bottom-color:#0090a8; }
+  @keyframes dopaPulse { 0%,100% { transform:scale(1); filter:brightness(1);} 50% { transform:scale(1.06); filter:brightness(1.35);} }
+  @keyframes scanSoft { 0% { transform:translateY(-100%);} 100% { transform:translateY(100%);} }
+  @keyframes blink { 0%,49% { opacity:1;} 50%,100% { opacity:.18;} }
+  @keyframes eq { 0%,100% { height:14%;} 50% { height:92%;} }
+  @keyframes titleBob { 0%,100% { transform:translateY(0) rotate(-1deg);} 50% { transform:translateY(-10px) rotate(1deg);} }
+  @keyframes menuGlow { 0%,100% { box-shadow:0 0 16px rgba(255,47,146,.4);} 50% { box-shadow:0 0 40px rgba(255,47,146,.95);} }
+  @keyframes marquee { 0% { transform:translateX(0);} 100% { transform:translateX(-50%);} }
+  @keyframes readyPulse { 0%,100% { transform:scale(1);} 50% { transform:scale(1.09);} }
+  @keyframes countZoom { 0% { transform:scale(2.4); opacity:0;} 18% { transform:scale(1); opacity:1;} 78% { transform:scale(1); opacity:1;} 100% { transform:scale(.7); opacity:0;} }
+  @keyframes feverBounce { 0%,100% { transform:translateY(0) rotate(-4deg);} 45% { transform:translateY(-14px) rotate(5deg);} }
+  @keyframes comboPop { 0%,60% { transform:scale(1) rotate(0);} 68% { transform:scale(1.5) rotate(-4deg);} 80% { transform:scale(.94) rotate(2deg);} 92%,100% { transform:scale(1) rotate(0);} }
+  @keyframes riseFade { 0% { transform:translateY(16px) scale(.6); opacity:0;} 24% { transform:translateY(-4px) scale(1.12); opacity:1;} 74% { transform:translateY(-34px) scale(1); opacity:.9;} 100% { transform:translateY(-58px) scale(.9); opacity:0;} }
+  @keyframes barGrow { 0% { transform:scaleX(0);} 62%,100% { transform:scaleX(1);} }
+  @keyframes crownFloat { 0%,100% { transform:translateY(0);} 50% { transform:translateY(-8px);} }
+</style>
+</helmet>
+
+<section style="min-height:100vh;padding:80px 90px 160px;background:#ded3bd;font-family:'DotGothic16',sans-serif;color:#23201c;display:flex;flex-direction:column;gap:76px">
+
+  <div style="display:flex;flex-direction:column;gap:14px;max-width:1180px">
+    <div style="display:flex;align-items:center;gap:14px">
+      <span style="font-family:'Press Start 2P',monospace;font-size:12px;background:#23201c;color:#ffe600;padding:9px 12px 7px">3</span>
+      <span style="font-family:'Press Start 2P',monospace;font-size:11px;letter-spacing:.2em;color:#8d8271">SCREENS — MENU / LOBBY / VERSUS / RESULT / KEYBIND</span>
+    </div>
+    <h1 style="margin:0;font-family:'Bungee',sans-serif;font-size:66px;line-height:.95;text-wrap:balance">SCREEN SET<span style="color:#c4116a">.</span></h1>
+    <p style="margin:0;font-size:19px;line-height:1.75;color:#5c5347;max-width:900px;text-wrap:pretty">Spec の値をそのまま適用。<a href="#3a">3a</a> メニュー / <a href="#3b">3b</a> ロビー / <a href="#3c">3c</a> マルチ対戦中 / <a href="#3d">3d</a> リザルト / <a href="#3e">3e</a> キーバインド設定。すべて 1120×720、クリーム筐体＋画面内のみ発光。</p>
+  </div>
+
+  <!-- ============================= 3a MENU ============================= -->
+  <div id="3a" style="display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:3px solid #c3b69c;padding-bottom:12px">
+      <span style="font-family:'Press Start 2P',monospace;font-size:13px;background:#c4116a;color:#fff;padding:9px 12px 7px">3a</span>
+      <span style="font-family:'Bungee',sans-serif;font-size:26px">MENU</span>
+      <span style="font-size:17px;color:#8d8271">タイトルは画面内で発光、選択肢はクリーム面の物理ボタン。</span>
+    </div>
+
+    <div style="position:relative;width:1120px;height:720px;overflow:hidden;background:#efe6d2;border:3px solid #b8ab92;box-shadow:0 6px 0 #c3b69c,0 40px 80px rgba(35,32,28,.28)">
+      <div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(35,32,28,.028) 0 2px,transparent 2px 7px);pointer-events:none"></div>
+
+      <div style="position:absolute;top:0;left:0;right:0;height:56px;background:#e5dac3;border-bottom:4px solid #c3b69c;display:flex;align-items:center;justify-content:space-between;padding:0 26px">
+        <span style="font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271;letter-spacing:.2em">FAMILY BLOCK SYSTEM / v0.1</span>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span style="font-family:'Press Start 2P',monospace;font-size:9px;color:#5c5347">SUZU</span>
+          <div style="width:26px;height:26px;background:#c4116a"></div>
+        </div>
+      </div>
+
+      <!-- big CRT title -->
+      <div style="position:absolute;left:60px;top:88px;padding:14px;background:#302b25;border-radius:12px;box-shadow:inset 0 3px 0 rgba(255,255,255,.12),0 8px 0 #1d1a16">
+        <div style="position:relative;width:560px;height:296px;background:#07040c;border:3px solid #14181c;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px">
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px);z-index:5"></div>
+          <div style="position:absolute;left:0;right:0;height:80px;background:linear-gradient(rgba(255,255,255,.045),rgba(255,255,255,0));animation:scanSoft 6.5s linear infinite;z-index:5"></div>
+          <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 55%,rgba(255,47,146,.22),rgba(255,47,146,0) 68%)"></div>
+
+          <div style="position:relative;display:flex;gap:6px;animation:titleBob 3.4s ease-in-out infinite">
+            <div style="width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4),0 0 18px rgba(0,229,255,.7)"></div>
+            <div style="width:26px;height:26px;background:#ffe600;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4),0 0 18px rgba(255,230,0,.7)"></div>
+            <div style="width:26px;height:26px;background:#ff2f92;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4),0 0 18px rgba(255,47,146,.7)"></div>
+            <div style="width:26px;height:26px;background:#34d94b;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4),0 0 18px rgba(52,217,75,.7)"></div>
+          </div>
+
+          <div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:6px">
+            <span style="font-family:'Bungee',sans-serif;font-size:64px;line-height:.9;letter-spacing:.02em;color:#fff;text-shadow:0 0 34px rgba(255,47,146,.9),0 5px 0 #7d0b43">DOPAGAKI</span>
+            <span style="font-family:'Bungee',sans-serif;font-size:36px;line-height:1;letter-spacing:.34em;color:#ffe600;text-shadow:0 0 26px rgba(255,230,0,.8)">TETRIS</span>
+          </div>
+
+          <div style="position:relative;font-family:'Press Start 2P',monospace;font-size:11px;color:#00e5ff;letter-spacing:.2em;animation:blink 900ms steps(1) infinite">PRESS ANY KEY</div>
+        </div>
+      </div>
+
+      <!-- menu buttons -->
+      <div style="position:absolute;right:60px;top:88px;width:380px;display:flex;flex-direction:column;gap:12px">
+        <div style="position:relative;display:flex;align-items:center;gap:16px;padding:17px 22px;background:#c4116a;border:3px solid #7d0b43;box-shadow:0 6px 0 #7d0b43;animation:menuGlow 1.38s ease-in-out infinite">
+          <span style="font-family:'Press Start 2P',monospace;font-size:14px;color:#ffe600">▶</span>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font-family:'Bungee',sans-serif;font-size:26px;color:#fff;letter-spacing:.03em">SOLO PLAY</span>
+            <span style="font-size:15px;color:#ffd6e8">ひとりで記録に挑む</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;padding:17px 22px;background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 6px 0 #c3b69c">
+          <span style="font-family:'Press Start 2P',monospace;font-size:14px;color:#c3b69c">▶</span>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font-family:'Bungee',sans-serif;font-size:25px;color:#23201c;letter-spacing:.03em">ROOM</span>
+            <span style="font-size:15px;color:#8d8271">部屋を作る / 参加する</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;padding:17px 22px;background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 6px 0 #c3b69c">
+          <span style="font-family:'Press Start 2P',monospace;font-size:14px;color:#c3b69c">▶</span>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font-family:'Bungee',sans-serif;font-size:26px;color:#23201c;letter-spacing:.03em">RANKING</span>
+            <span style="font-size:15px;color:#8d8271">世界ランキング</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px">
+          <div style="flex:1;display:flex;align-items:center;gap:12px;padding:14px 18px;background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 6px 0 #c3b69c">
+            <span style="font-family:'Bungee',sans-serif;font-size:19px;color:#23201c">CONFIG</span>
+          </div>
+          <div style="flex:1;display:flex;align-items:center;gap:12px;padding:14px 18px;background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 6px 0 #c3b69c">
+            <span style="font-family:'Bungee',sans-serif;font-size:19px;color:#23201c">HOW TO</span>
+          </div>
+        </div>
+        <div style="background:#23201c;border:3px solid #14120f;box-shadow:0 5px 0 #14120f;padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+          <div style="font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271;letter-spacing:.18em">YOUR BEST</div>
+          <div style="font-family:'Press Start 2P',monospace;font-size:26px;color:#ffe600;text-shadow:0 0 20px rgba(255,230,0,.6)">312,880</div>
+          <div style="display:flex;justify-content:space-between;font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271"><span>MAX COMBO 34</span><span>RANK #128</span></div>
+        </div>
+      </div>
+
+      <!-- event stack teaser strip -->
+      <div style="position:absolute;left:60px;top:436px;width:594px;background:#23201c;border:3px solid #14120f;box-shadow:0 5px 0 #14120f;padding:18px;display:flex;align-items:center;gap:20px">
+        <div style="font-family:'Press Start 2P',monospace;font-size:10px;color:#ffe600;letter-spacing:.16em;writing-mode:vertical-rl;text-orientation:upright;line-height:1.4">EVENT</div>
+        <div style="display:flex;gap:14px;flex:1">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px">
+            <div style="width:46px;height:46px;background:#ff2f92;display:flex;align-items:center;justify-content:center;font-size:24px;color:#180008;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4),0 0 22px rgba(255,47,146,.7);animation:dopaPulse 900ms ease-in-out infinite">●</div>
+            <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:#ff2f92">BOMB</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px">
+            <div style="width:46px;height:46px;background:#ff5a7a;display:flex;align-items:center;justify-content:center;font-size:22px;color:#3a000c;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4),0 0 22px rgba(255,90,122,.7);animation:dopaPulse 1100ms ease-in-out infinite">♥</div>
+            <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:#ff5a7a">HEART</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px">
+            <div style="width:46px;height:46px;background:#ffe600;display:flex;align-items:center;justify-content:center;font-size:22px;color:#2a2000;box-shadow:inset 0 4px 0 rgba(255,255,255,.5),inset 0 -4px 0 rgba(0,0,0,.35),0 0 22px rgba(255,230,0,.75);animation:dopaPulse 1000ms ease-in-out infinite">◎</div>
+            <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:#ffe600">COIN</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px">
+            <div style="width:46px;height:46px;background:#34d94b;display:flex;align-items:center;justify-content:center;font-size:22px;color:#062d0c;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4),0 0 22px rgba(52,217,75,.7);animation:dopaPulse 1200ms ease-in-out infinite">✦</div>
+            <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:#34d94b">CLOVER</span>
+          </div>
+        </div>
+        <div style="width:190px;font-size:15px;line-height:1.6;color:#e8dcc4">ミノに紛れる4種のイベント。<span style="color:#ffe600">溜めて撃つ。</span></div>
+      </div>
+
+      <!-- marquee ticker -->
+      <div style="position:absolute;left:0;right:0;bottom:52px;height:38px;background:#23201c;overflow:hidden;display:flex;align-items:center">
+        <div style="display:flex;gap:48px;white-space:nowrap;font-family:'Press Start 2P',monospace;font-size:11px;color:#ffe600;animation:marquee 22s linear infinite">
+          <span>NOW PLAYING 1,204 <span style="color:#8d8271">///</span> TOP TODAY: KAZ 892,300 <span style="color:#8d8271">///</span> CLOVER×4 IS BROKEN <span style="color:#8d8271">///</span> ROOM #A7K2 待機中 <span style="color:#8d8271">///</span></span>
+          <span>NOW PLAYING 1,204 <span style="color:#8d8271">///</span> TOP TODAY: KAZ 892,300 <span style="color:#8d8271">///</span> CLOVER×4 IS BROKEN <span style="color:#8d8271">///</span> ROOM #A7K2 待機中 <span style="color:#8d8271">///</span></span>
+        </div>
+      </div>
+
+      <div style="position:absolute;left:0;right:0;bottom:0;height:52px;background:#e5dac3;border-top:4px solid #c3b69c;display:flex;align-items:center;justify-content:space-between;padding:0 26px">
+        <div style="display:flex;gap:16px;font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271">
+          <span><span style="color:#c4116a">↑↓</span> 選択</span>
+          <span><span style="color:#c4116a">ENTER</span> 決定</span>
+          <span><span style="color:#c4116a">ESC</span> 戻る</span>
+        </div>
+        <div style="display:flex;gap:6px;align-items:flex-end;height:24px">
+          <div style="width:5px;background:#c4116a;animation:eq 480ms ease-in-out infinite"></div>
+          <div style="width:5px;background:#c4116a;animation:eq 620ms ease-in-out infinite"></div>
+          <div style="width:5px;background:#0090a8;animation:eq 380ms ease-in-out infinite"></div>
+          <div style="width:5px;background:#0090a8;animation:eq 540ms ease-in-out infinite"></div>
+          <div style="width:5px;background:#8d8271;animation:eq 700ms ease-in-out infinite"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================= 3b LOBBY ============================= -->
+  <div id="3b" style="display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:3px solid #c3b69c;padding-bottom:12px">
+      <span style="font-family:'Press Start 2P',monospace;font-size:13px;background:#c4116a;color:#fff;padding:9px 12px 7px">3b</span>
+      <span style="font-family:'Bungee',sans-serif;font-size:26px">ROOM / LOBBY</span>
+      <span style="font-size:17px;color:#8d8271">部屋作成・参加・Ready・カウントダウンを1画面に。</span>
+    </div>
+
+    <div style="position:relative;width:1120px;height:720px;overflow:hidden;background:#efe6d2;border:3px solid #b8ab92;box-shadow:0 6px 0 #c3b69c,0 40px 80px rgba(35,32,28,.28)">
+      <div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(35,32,28,.028) 0 2px,transparent 2px 7px);pointer-events:none"></div>
+
+      <div style="position:absolute;top:0;left:0;right:0;height:64px;background:#e5dac3;border-bottom:4px solid #c3b69c;display:flex;align-items:center;justify-content:space-between;padding:0 26px">
+        <div style="display:flex;align-items:center;gap:16px">
+          <span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#23201c;letter-spacing:.16em">ROOM</span>
+          <span style="font-family:'Press Start 2P',monospace;font-size:20px;color:#c4116a;letter-spacing:.1em">#A7K2</span>
+          <span style="padding:6px 10px;background:#23201c;color:#34d94b;font-family:'Press Start 2P',monospace;font-size:9px">PRIVATE</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span style="font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271">招待リンクをコピー</span>
+          <div style="padding:9px 12px;background:#e5dac3;border:2px solid #c3b69c;box-shadow:0 3px 0 #c3b69c;font-family:'Press Start 2P',monospace;font-size:10px;color:#5c5347">COPY</div>
+        </div>
+      </div>
+
+      <!-- player slots -->
+      <div style="position:absolute;left:26px;top:88px;width:706px;display:flex;flex-direction:column;gap:14px">
+        <div style="font-family:'Press Start 2P',monospace;font-size:10px;color:#8d8271;letter-spacing:.18em">PLAYERS 3 / 4</div>
+
+        <div style="display:flex;align-items:center;gap:18px;padding:16px 18px;background:#23201c;border:3px solid #14120f;box-shadow:0 5px 0 #14120f">
+          <div style="width:56px;height:56px;background:#ff2f92;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:18px;color:#180008;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)">1P</div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-family:'Bungee',sans-serif;font-size:24px;color:#fff">SUZU</span>
+              <span style="padding:4px 8px;background:#ffe600;color:#2a2000;font-family:'Press Start 2P',monospace;font-size:8px">HOST</span>
+              <span style="font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271">あなた</span>
+            </div>
+            <div style="display:flex;gap:14px;font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271"><span>BEST 312,880</span><span>PING 18ms</span></div>
+          </div>
+          <div style="padding:14px 20px;background:#34d94b;color:#062d0c;font-family:'Press Start 2P',monospace;font-size:14px;box-shadow:0 0 26px rgba(52,217,75,.7);animation:readyPulse 1.38s ease-in-out infinite">READY</div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:18px;padding:16px 18px;background:#23201c;border:3px solid #14120f;box-shadow:0 5px 0 #14120f">
+          <div style="width:56px;height:56px;background:#00e5ff;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:18px;color:#00232b;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)">2P</div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+            <span style="font-family:'Bungee',sans-serif;font-size:24px;color:#fff">KAZ</span>
+            <div style="display:flex;gap:14px;font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271"><span>BEST 892,300</span><span>PING 42ms</span></div>
+          </div>
+          <div style="padding:14px 20px;background:#34d94b;color:#062d0c;font-family:'Press Start 2P',monospace;font-size:14px;box-shadow:0 0 26px rgba(52,217,75,.7);animation:readyPulse 1.38s ease-in-out infinite 200ms">READY</div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:18px;padding:16px 18px;background:#2e2a24;border:3px solid #14120f;box-shadow:0 5px 0 #14120f">
+          <div style="width:56px;height:56px;background:#34d94b;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:18px;color:#062d0c;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)">3P</div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+            <span style="font-family:'Bungee',sans-serif;font-size:24px;color:#e8dcc4">MOMO</span>
+            <div style="display:flex;gap:14px;font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271"><span>BEST 141,020</span><span>PING 96ms</span></div>
+          </div>
+          <div style="padding:14px 20px;background:#3a332c;color:#8d8271;font-family:'Press Start 2P',monospace;font-size:14px;animation:blink 1s steps(1) infinite">WAIT…</div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:center;gap:14px;padding:22px;background:#cdc1a9;border:3px dashed #a89c85">
+          <span style="font-family:'Press Start 2P',monospace;font-size:12px;color:#8d8271">4P — 参加者を待っています</span>
+        </div>
+
+        <!-- chat -->
+        <div style="margin-top:4px;background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:16px;display:flex;flex-direction:column;gap:10px">
+          <div style="font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271;letter-spacing:.18em">CHAT</div>
+          <div style="display:flex;flex-direction:column;gap:7px;font-size:16px;color:#3d372f">
+            <div><span style="color:#0090a8;font-family:'Press Start 2P',monospace;font-size:10px">KAZ</span> クローバー禁止でいこ</div>
+            <div><span style="color:#c4116a;font-family:'Press Start 2P',monospace;font-size:10px">SUZU</span> いいよ、爆弾はアリで</div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;margin-top:2px">
+            <div style="flex:1;padding:11px 12px;background:#efe6d2;border:2px solid #c3b69c;font-size:15px;color:#a89c85">メッセージを入力…<span style="color:#c4116a;animation:blink 900ms steps(1) infinite">|</span></div>
+            <div style="padding:11px 14px;background:#c4116a;color:#fff;font-family:'Press Start 2P',monospace;font-size:10px;box-shadow:0 3px 0 #7d0b43">SEND</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- right: rules + countdown -->
+      <div style="position:absolute;right:26px;top:88px;width:340px;display:flex;flex-direction:column;gap:12px">
+        <div style="padding:14px;background:#302b25;border-radius:12px;box-shadow:inset 0 3px 0 rgba(255,255,255,.12),0 8px 0 #1d1a16">
+          <div style="position:relative;width:312px;height:172px;background:#07040c;border:3px solid #14181c;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+            <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px);z-index:5"></div>
+            <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,rgba(255,230,0,.2),rgba(255,230,0,0) 65%)"></div>
+            <span style="position:relative;font-family:'Press Start 2P',monospace;font-size:10px;color:#8d8271;letter-spacing:.2em">STARTING IN</span>
+            <span style="position:relative;font-family:'Bungee',sans-serif;font-size:82px;line-height:.85;color:#ffe600;text-shadow:0 0 40px rgba(255,230,0,.9);animation:countZoom 1s cubic-bezier(.2,1.5,.3,1) infinite">3</span>
+            <span style="position:relative;font-family:'Press Start 2P',monospace;font-size:9px;color:#ff2f92;animation:blink 690ms steps(1) infinite">全員 READY 待ち</span>
+          </div>
+        </div>
+
+        <div style="background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+          <div style="font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271;letter-spacing:.18em">RULES</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;border-bottom:1px dashed #c3b69c"><span style="font-size:16px">イベントスタック</span><span style="font-family:'Press Start 2P',monospace;font-size:10px;color:#c4116a">ON</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;border-bottom:1px dashed #c3b69c"><span style="font-size:16px">クローバー</span><span style="font-family:'Press Start 2P',monospace;font-size:10px;color:#8d8271">OFF</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;border-bottom:1px dashed #c3b69c"><span style="font-size:16px">おじゃま送信</span><span style="font-family:'Press Start 2P',monospace;font-size:10px;color:#c4116a">ON</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:16px">制限時間</span><span style="font-family:'Press Start 2P',monospace;font-size:10px;color:#5c5347">3:00</span></div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="padding:15px;background:#c4116a;border:3px solid #7d0b43;box-shadow:0 6px 0 #7d0b43;text-align:center;font-family:'Bungee',sans-serif;font-size:23px;color:#fff;animation:menuGlow 1.38s ease-in-out infinite">READY!</div>
+          <div style="padding:12px;background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;text-align:center;font-family:'Bungee',sans-serif;font-size:17px;color:#5c5347">部屋を出る</div>
+        </div>
+      </div>
+
+      <div style="position:absolute;left:0;right:0;bottom:0;height:52px;background:#e5dac3;border-top:4px solid #c3b69c;display:flex;align-items:center;justify-content:space-between;padding:0 26px">
+        <div style="display:flex;gap:16px;font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271">
+          <span><span style="color:#c4116a">R</span> READY</span>
+          <span><span style="color:#c4116a">T</span> CHAT</span>
+          <span><span style="color:#c4116a">ESC</span> 退室</span>
+        </div>
+        <span style="font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271">SERVER: JP-TOKYO-03</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================= 3c VERSUS ============================= -->
+  <div id="3c" style="display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:3px solid #c3b69c;padding-bottom:12px">
+      <span style="font-family:'Press Start 2P',monospace;font-size:13px;background:#c4116a;color:#fff;padding:9px 12px 7px">3c</span>
+      <span style="font-family:'Bungee',sans-serif;font-size:26px">VERSUS (4P)</span>
+      <span style="font-size:17px;color:#8d8271">自分の盤面は中央フルサイズ、他3人は右に縮小盤。フィーバー中の状態。</span>
+    </div>
+
+    <div style="position:relative;width:1120px;height:720px;overflow:hidden;background:#efe6d2;border:3px solid #b8ab92;box-shadow:0 6px 0 #c3b69c,0 40px 80px rgba(35,32,28,.28)">
+      <div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(35,32,28,.028) 0 2px,transparent 2px 7px);pointer-events:none"></div>
+
+      <div style="position:absolute;top:0;left:0;right:0;height:56px;background:#e5dac3;border-bottom:4px solid #c3b69c;display:flex;align-items:center;justify-content:space-between;padding:0 26px">
+        <div style="display:flex;align-items:center;gap:14px">
+          <span style="font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271;letter-spacing:.18em">ROOM #A7K2</span>
+          <span style="padding:5px 9px;background:#c4116a;color:#fff;font-family:'Press Start 2P',monospace;font-size:9px">RANK 1 / 4</span>
+        </div>
+        <span style="font-family:'Press Start 2P',monospace;font-size:16px;color:#23201c">01:42</span>
+      </div>
+
+      <!-- left: hold + stack -->
+      <div style="position:absolute;left:22px;top:74px;width:210px;display:flex;flex-direction:column;gap:12px">
+        <div style="background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:12px">
+          <div style="font-family:'Press Start 2P',monospace;font-size:8px;color:#8d8271;letter-spacing:.18em;margin-bottom:10px">HOLD ×2</div>
+          <div style="display:flex;gap:8px">
+            <div style="flex:1;height:64px;background:#0f0a18;display:flex;align-items:center;justify-content:center">
+              <div style="display:grid;grid-template-columns:repeat(2,16px);grid-auto-rows:16px;gap:2px">
+                <div style="background:#ffe600;box-shadow:inset 0 3px 0 rgba(255,255,255,.5),inset 0 -3px 0 rgba(0,0,0,.35)"></div><div style="background:#ffe600;box-shadow:inset 0 3px 0 rgba(255,255,255,.5),inset 0 -3px 0 rgba(0,0,0,.35)"></div>
+                <div style="background:#ffe600;box-shadow:inset 0 3px 0 rgba(255,255,255,.5),inset 0 -3px 0 rgba(0,0,0,.35)"></div><div style="background:#ffe600;box-shadow:inset 0 3px 0 rgba(255,255,255,.5),inset 0 -3px 0 rgba(0,0,0,.35)"></div>
+              </div>
+            </div>
+            <div style="flex:1;height:64px;background:#0f0a18;display:flex;align-items:center;justify-content:center">
+              <div style="display:grid;grid-template-columns:repeat(3,13px);grid-auto-rows:13px;gap:2px">
+                <div></div><div style="background:#a855ff"></div><div></div>
+                <div style="background:#a855ff"></div><div style="background:#a855ff"></div><div style="background:#a855ff"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:#23201c;border:3px solid #14120f;box-shadow:0 5px 0 #14120f;padding:12px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:#8d8271;letter-spacing:.16em">STACK</span>
+            <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:#34d94b">CLOVER</span>
+          </div>
+          <div style="display:flex;gap:6px">
+            <div style="width:38px;height:38px;background:#34d94b;display:flex;align-items:center;justify-content:center;font-size:20px;color:#062d0c;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4),0 0 20px rgba(52,217,75,.8);animation:feverBounce 460ms cubic-bezier(.3,1.5,.4,1) infinite">✦</div>
+            <div style="width:38px;height:38px;background:#34d94b;display:flex;align-items:center;justify-content:center;font-size:20px;color:#062d0c;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4),0 0 20px rgba(52,217,75,.8);animation:feverBounce 460ms cubic-bezier(.3,1.5,.4,1) infinite 70ms">✦</div>
+            <div style="width:38px;height:38px;background:#34d94b;display:flex;align-items:center;justify-content:center;font-size:20px;color:#062d0c;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4),0 0 20px rgba(52,217,75,.8);animation:feverBounce 460ms cubic-bezier(.3,1.5,.4,1) infinite 140ms">✦</div>
+            <div style="width:38px;height:38px;background:#34d94b;display:flex;align-items:center;justify-content:center;font-size:20px;color:#062d0c;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4),0 0 20px rgba(52,217,75,.8);animation:feverBounce 460ms cubic-bezier(.3,1.5,.4,1) infinite 210ms">✦</div>
+          </div>
+          <div style="font-size:14px;color:#e8dcc4;line-height:1.5">✦4 — <span style="color:#ffe600">10秒FEVER＋コンボ毎+10%</span></div>
+          <div style="height:8px;background:#14120f"><div style="width:100%;height:100%;background:linear-gradient(90deg,#34d94b,#ffe600)"></div></div>
+          <div style="font-family:'Press Start 2P',monospace;font-size:8px;color:#34d94b;text-align:center;animation:blink 345ms steps(1) infinite">PRESS E !!</div>
+        </div>
+
+        <div style="background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:12px;display:flex;flex-direction:column;gap:8px">
+          <div style="font-family:'Press Start 2P',monospace;font-size:8px;color:#8d8271;letter-spacing:.18em">おじゃま受信</div>
+          <div style="display:flex;gap:3px">
+            <div style="flex:1;height:14px;background:#ff5a2f"></div>
+            <div style="flex:1;height:14px;background:#ff5a2f"></div>
+            <div style="flex:1;height:14px;background:#ff5a2f;animation:blink 345ms steps(1) infinite"></div>
+            <div style="flex:1;height:14px;background:#cdc1a9"></div>
+            <div style="flex:1;height:14px;background:#cdc1a9"></div>
+          </div>
+          <span style="font-size:14px;color:#8d8271">3列が KAZ から到着</span>
+        </div>
+      </div>
+
+      <!-- center board (fever) -->
+      <div style="position:absolute;left:246px;top:70px;padding:14px;background:#302b25;border-radius:12px;box-shadow:inset 0 3px 0 rgba(255,255,255,.12),0 8px 0 #1d1a16">
+        <div style="position:relative;width:292px;height:572px;padding:3px;background:#07040c;border:3px solid #14181c;overflow:hidden">
+          <div style="position:absolute;inset:3px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.045) 0 1px,transparent 1px 28px),repeating-linear-gradient(rgba(255,255,255,.045) 0 1px,transparent 1px 28px)"></div>
+          <div style="position:absolute;inset:3px;background:radial-gradient(circle at 50% 60%,rgba(255,47,146,.3),rgba(255,47,146,0) 68%);animation:dopaPulse 690ms ease-in-out infinite"></div>
+          <div style="position:absolute;inset:3px;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px);z-index:5"></div>
+          <div style="position:absolute;left:3px;right:3px;height:90px;background:linear-gradient(rgba(255,255,255,.045),rgba(255,255,255,0));animation:scanSoft 6.5s linear infinite;z-index:5"></div>
+
+          <div style="position:absolute;left:3px;top:3px;width:280px;height:560px;z-index:6">
+            <div style="position:absolute;left:112px;top:56px;width:26px;height:26px;background:#ff5a2f;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:140px;top:56px;width:26px;height:26px;background:#ff5a2f;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:84px;top:84px;width:26px;height:26px;background:#ff5a2f;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:112px;top:84px;width:26px;height:26px;background:#34d94b;display:flex;align-items:center;justify-content:center;font-size:16px;color:#062d0c;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4),0 0 24px rgba(52,217,75,.9);animation:dopaPulse 690ms ease-in-out infinite">✦</div>
+
+            <div style="position:absolute;left:112px;top:364px;width:26px;height:26px;border:2px solid rgba(0,229,255,.55);background:rgba(0,229,255,.1)"></div>
+            <div style="position:absolute;left:140px;top:364px;width:26px;height:26px;border:2px solid rgba(0,229,255,.55);background:rgba(0,229,255,.1)"></div>
+            <div style="position:absolute;left:84px;top:392px;width:26px;height:26px;border:2px solid rgba(0,229,255,.55);background:rgba(0,229,255,.1)"></div>
+            <div style="position:absolute;left:112px;top:392px;width:26px;height:26px;border:2px solid rgba(0,229,255,.55);background:rgba(0,229,255,.1)"></div>
+
+            <div style="position:absolute;left:0px;top:420px;width:26px;height:26px;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:252px;top:420px;width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:0px;top:448px;width:26px;height:26px;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:28px;top:448px;width:26px;height:26px;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:196px;top:448px;width:26px;height:26px;background:#ffe600;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:252px;top:448px;width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:0px;top:476px;width:26px;height:26px;background:#34d94b;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:28px;top:476px;width:26px;height:26px;background:#34d94b;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:56px;top:476px;width:26px;height:26px;background:#ff2f92;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:168px;top:476px;width:26px;height:26px;background:#3a7bff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:196px;top:476px;width:26px;height:26px;background:#ffe600;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:252px;top:476px;width:26px;height:26px;background:#ff5a2f;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:0px;top:504px;width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:28px;top:504px;width:26px;height:26px;background:#ffe600;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:56px;top:504px;width:26px;height:26px;background:#ff2f92;display:flex;align-items:center;justify-content:center;font-size:15px;color:#180008;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)">●</div>
+            <div style="position:absolute;left:84px;top:504px;width:26px;height:26px;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:112px;top:504px;width:26px;height:26px;background:#34d94b;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:140px;top:504px;width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:168px;top:504px;width:26px;height:26px;background:#ff5a2f;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:196px;top:504px;width:26px;height:26px;background:#3a7bff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:252px;top:504px;width:26px;height:26px;background:#ffe600;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:0px;top:532px;width:280px;height:26px;background:repeating-linear-gradient(90deg,#5c5347 0 26px,#07040c 26px 28px)"></div>
+          </div>
+
+          <div style="position:absolute;left:115px;top:3px;width:54px;height:560px;background:linear-gradient(rgba(255,230,0,.2),rgba(255,230,0,0));z-index:7"></div>
+          <div style="position:absolute;left:134px;top:376px;width:16px;height:16px;background:#ffe600;box-shadow:0 0 18px #ffe600;z-index:7"></div>
+
+          <div style="position:absolute;left:50%;top:170px;transform:translateX(-50%);z-index:8;display:flex;flex-direction:column;align-items:center;gap:4px">
+            <span style="font-family:'Bungee',sans-serif;font-size:78px;line-height:.85;color:#fff;text-shadow:0 0 30px rgba(255,47,146,.95),0 5px 0 #7d0b43;animation:comboPop 1.8s cubic-bezier(.2,1.6,.3,1) infinite">18</span>
+            <span style="font-family:'Press Start 2P',monospace;font-size:12px;color:#ff2f92">COMBO</span>
+            <span style="position:absolute;top:-16px;font-family:'Press Start 2P',monospace;font-size:14px;color:#ffe600;white-space:nowrap;animation:riseFade 1.8s ease-out infinite">+1 ×2.70</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- fever banner over board -->
+      <div style="position:absolute;left:389px;top:60px;display:flex;align-items:center;gap:12px;padding:8px 18px;background:linear-gradient(90deg,#ff2f92,#ffe600);box-shadow:0 0 36px rgba(255,47,146,.7);z-index:9;animation:dopaPulse 690ms ease-in-out infinite">
+        <span style="font-family:'Bungee',sans-serif;font-size:20px;color:#1a0010">FEVER</span>
+        <span style="font-family:'Press Start 2P',monospace;font-size:14px;color:#1a0010">8.4</span>
+      </div>
+
+      <!-- right: next + score + rivals -->
+      <div style="position:absolute;left:582px;top:74px;width:150px;display:flex;flex-direction:column;gap:12px">
+        <div style="background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:12px">
+          <div style="font-family:'Press Start 2P',monospace;font-size:8px;color:#8d8271;letter-spacing:.18em;margin-bottom:10px">NEXT</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;justify-content:center;padding:7px;background:#0f0a18;border-left:3px solid #ff2f92">
+              <div style="display:grid;grid-template-columns:repeat(4,14px);grid-auto-rows:14px;gap:2px">
+                <div style="background:#00e5ff"></div><div style="background:#00e5ff"></div><div style="background:#34d94b;display:flex;align-items:center;justify-content:center;font-size:10px;color:#062d0c">✦</div><div style="background:#00e5ff"></div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;padding:7px;background:#cdc1a9">
+              <div style="display:grid;grid-template-columns:repeat(2,13px);grid-auto-rows:13px;gap:2px">
+                <div style="background:#ffe600"></div><div style="background:#ffe600"></div><div style="background:#ffe600"></div><div style="background:#ffe600"></div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;padding:7px;background:#cdc1a9;opacity:.8">
+              <div style="display:grid;grid-template-columns:repeat(3,12px);grid-auto-rows:12px;gap:2px">
+                <div></div><div style="background:#a855ff"></div><div></div>
+                <div style="background:#a855ff"></div><div style="background:#a855ff"></div><div style="background:#a855ff"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:#23201c;border:3px solid #14120f;box-shadow:0 5px 0 #14120f;padding:12px;display:flex;flex-direction:column;gap:4px">
+          <div style="font-family:'Press Start 2P',monospace;font-size:8px;color:#8d8271;letter-spacing:.16em">SCORE</div>
+          <div style="font-family:'Press Start 2P',monospace;font-size:17px;color:#ffe600;text-shadow:0 0 18px rgba(255,230,0,.7)">341,900</div>
+          <div style="font-family:'Press Start 2P',monospace;font-size:8px;color:#ff2f92;margin-top:2px;animation:blink 345ms steps(1) infinite">×1.5 FEVER</div>
+        </div>
+
+        <div style="background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:12px;display:flex;flex-direction:column;gap:6px">
+          <div style="font-family:'Press Start 2P',monospace;font-size:8px;color:#8d8271;letter-spacing:.16em">LINES</div>
+          <span style="font-family:'Press Start 2P',monospace;font-size:16px;color:#23201c">74</span>
+          <div style="font-family:'Press Start 2P',monospace;font-size:8px;color:#8d8271;letter-spacing:.16em;margin-top:4px">LEVEL</div>
+          <span style="font-family:'Press Start 2P',monospace;font-size:16px;color:#c4116a">11</span>
+        </div>
+      </div>
+
+      <div style="position:absolute;right:22px;top:74px;width:344px;display:flex;flex-direction:column;gap:12px">
+        <div style="font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271;letter-spacing:.18em">RIVALS</div>
+
+        <div style="display:flex;gap:12px;padding:12px;background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c">
+          <div style="position:relative;width:100px;height:180px;background:#07040c;border:2px solid #14181c;overflow:hidden">
+            <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px);z-index:5"></div>
+            <div style="position:absolute;left:0px;bottom:0px;width:9px;height:9px;background:#00e5ff"></div>
+            <div style="position:absolute;left:10px;bottom:0px;width:9px;height:9px;background:#ffe600"></div>
+            <div style="position:absolute;left:20px;bottom:0px;width:9px;height:9px;background:#ff2f92"></div>
+            <div style="position:absolute;left:30px;bottom:0px;width:9px;height:9px;background:#34d94b"></div>
+            <div style="position:absolute;left:40px;bottom:0px;width:9px;height:9px;background:#a855ff"></div>
+            <div style="position:absolute;left:60px;bottom:0px;width:9px;height:9px;background:#ff5a2f"></div>
+            <div style="position:absolute;left:70px;bottom:0px;width:9px;height:9px;background:#3a7bff"></div>
+            <div style="position:absolute;left:0px;bottom:10px;width:9px;height:9px;background:#ffe600"></div>
+            <div style="position:absolute;left:10px;bottom:10px;width:9px;height:9px;background:#34d94b"></div>
+            <div style="position:absolute;left:30px;bottom:10px;width:9px;height:9px;background:#00e5ff"></div>
+            <div style="position:absolute;left:70px;bottom:10px;width:9px;height:9px;background:#ff2f92"></div>
+            <div style="position:absolute;left:0px;bottom:20px;width:9px;height:9px;background:#a855ff"></div>
+            <div style="position:absolute;left:20px;bottom:20px;width:9px;height:9px;background:#ff5a2f"></div>
+            <div style="position:absolute;left:40px;bottom:30px;width:9px;height:9px;background:#3a7bff"></div>
+            <div style="position:absolute;left:50px;bottom:30px;width:9px;height:9px;background:#3a7bff"></div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="width:24px;height:24px;background:#00e5ff;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:9px;color:#00232b">2P</span>
+              <span style="font-family:'Bungee',sans-serif;font-size:19px;color:#23201c">KAZ</span>
+            </div>
+            <span style="font-family:'Press Start 2P',monospace;font-size:14px;color:#c4116a">298,400</span>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:#8d8271">COMBO 6</span>
+              <div style="height:8px;background:#cdc1a9"><div style="width:72%;height:100%;background:#c4116a;transform-origin:left;animation:barGrow 2.4s ease-out infinite"></div></div>
+            </div>
+            <span style="padding:5px 8px;background:#23201c;color:#ff5a2f;font-family:'Press Start 2P',monospace;font-size:8px;align-self:flex-start;animation:blink 690ms steps(1) infinite">おじゃま送信中</span>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px">
+          <div style="flex:1;display:flex;flex-direction:column;gap:8px;padding:10px;background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="width:20px;height:20px;background:#34d94b;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:8px;color:#062d0c">3P</span>
+              <span style="font-family:'Bungee',sans-serif;font-size:15px;color:#23201c">MOMO</span>
+            </div>
+            <div style="position:relative;height:130px;background:#07040c;border:2px solid #14181c;overflow:hidden">
+              <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px);z-index:5"></div>
+              <div style="position:absolute;left:0px;bottom:0px;width:8px;height:8px;background:#ff2f92"></div>
+              <div style="position:absolute;left:9px;bottom:0px;width:8px;height:8px;background:#ffe600"></div>
+              <div style="position:absolute;left:18px;bottom:0px;width:8px;height:8px;background:#00e5ff"></div>
+              <div style="position:absolute;left:36px;bottom:0px;width:8px;height:8px;background:#34d94b"></div>
+              <div style="position:absolute;left:54px;bottom:0px;width:8px;height:8px;background:#a855ff"></div>
+              <div style="position:absolute;left:0px;bottom:9px;width:8px;height:8px;background:#3a7bff"></div>
+              <div style="position:absolute;left:18px;bottom:9px;width:8px;height:8px;background:#ff5a2f"></div>
+            </div>
+            <span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#5c5347">112,600</span>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:8px;padding:10px;background:#cdc1a9;border:3px solid #a89c85;box-shadow:0 5px 0 #a89c85;opacity:.85">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="width:20px;height:20px;background:#8d8271;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:8px;color:#efe6d2">4P</span>
+              <span style="font-family:'Bungee',sans-serif;font-size:15px;color:#5c5347">RIN</span>
+            </div>
+            <div style="position:relative;height:130px;background:#1a1620;border:2px solid #14181c;overflow:hidden;display:flex;align-items:center;justify-content:center">
+              <span style="font-family:'Press Start 2P',monospace;font-size:10px;color:#8d8271">K.O.</span>
+            </div>
+            <span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#8d8271">64,150</span>
+          </div>
+        </div>
+
+        <div style="background:#23201c;border:3px solid #14120f;box-shadow:0 5px 0 #14120f;padding:12px;display:flex;align-items:center;gap:10px">
+          <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:#8d8271">BEAT</span>
+          <div style="flex:1;display:flex;align-items:flex-end;gap:4px;height:28px">
+            <div style="flex:1;background:#ff2f92;animation:eq 345ms ease-in-out infinite"></div>
+            <div style="flex:1;background:#ffe600;animation:eq 460ms ease-in-out infinite"></div>
+            <div style="flex:1;background:#00e5ff;animation:eq 290ms ease-in-out infinite"></div>
+            <div style="flex:1;background:#34d94b;animation:eq 400ms ease-in-out infinite"></div>
+            <div style="flex:1;background:#ff2f92;animation:eq 520ms ease-in-out infinite"></div>
+            <div style="flex:1;background:#a855ff;animation:eq 360ms ease-in-out infinite"></div>
+          </div>
+          <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:#ffe600">174</span>
+        </div>
+      </div>
+
+      <div style="position:absolute;left:0;right:0;bottom:0;height:44px;background:#e5dac3;border-top:4px solid #c3b69c;display:flex;align-items:center;justify-content:space-between;padding:0 26px">
+        <div style="display:flex;gap:14px;font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271">
+          <span><span style="color:#c4116a">MOUSE</span> 追従</span>
+          <span><span style="color:#c4116a">SPACE</span> DROP</span>
+          <span><span style="color:#c4116a">E</span> STACK</span>
+          <span><span style="color:#c4116a">Q</span> 破棄</span>
+          <span><span style="color:#c4116a">SHIFT</span> HOLD</span>
+        </div>
+        <span style="font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271">PING 18ms</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================= 3d RESULT ============================= -->
+  <div id="3d" style="display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:3px solid #c3b69c;padding-bottom:12px">
+      <span style="font-family:'Press Start 2P',monospace;font-size:13px;background:#c4116a;color:#fff;padding:9px 12px 7px">3d</span>
+      <span style="font-family:'Bungee',sans-serif;font-size:26px">RESULT</span>
+      <span style="font-size:17px;color:#8d8271">順位・スコア内訳・イベント使用履歴。数値はカウントアップで積み上がる。</span>
+    </div>
+
+    <div style="position:relative;width:1120px;height:720px;overflow:hidden;background:#efe6d2;border:3px solid #b8ab92;box-shadow:0 6px 0 #c3b69c,0 40px 80px rgba(35,32,28,.28)">
+      <div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(35,32,28,.028) 0 2px,transparent 2px 7px);pointer-events:none"></div>
+
+      <div style="position:absolute;top:0;left:0;right:0;height:56px;background:#23201c;display:flex;align-items:center;justify-content:space-between;padding:0 26px">
+        <span style="font-family:'Press Start 2P',monospace;font-size:10px;color:#8d8271;letter-spacing:.2em">ROOM #A7K2 — 3:00 終了</span>
+        <span style="font-family:'Press Start 2P',monospace;font-size:10px;color:#ffe600;animation:blink 900ms steps(1) infinite">RESULT</span>
+      </div>
+
+      <!-- winner crt -->
+      <div style="position:absolute;left:44px;top:84px;padding:14px;background:#302b25;border-radius:12px;box-shadow:inset 0 3px 0 rgba(255,255,255,.12),0 8px 0 #1d1a16">
+        <div style="position:relative;width:452px;height:256px;background:#07040c;border:3px solid #14181c;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px">
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px);z-index:5"></div>
+          <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 55%,rgba(255,230,0,.28),rgba(255,230,0,0) 68%);animation:dopaPulse 1.38s ease-in-out infinite"></div>
+          <span style="position:relative;font-family:'Press Start 2P',monospace;font-size:26px;color:#ffe600;animation:crownFloat 2.4s ease-in-out infinite">★</span>
+          <span style="position:relative;font-family:'Press Start 2P',monospace;font-size:11px;color:#8d8271;letter-spacing:.24em">WINNER</span>
+          <span style="position:relative;font-family:'Bungee',sans-serif;font-size:56px;line-height:.9;color:#fff;text-shadow:0 0 34px rgba(255,230,0,.9),0 5px 0 #7d0b43">SUZU</span>
+          <span style="position:relative;font-family:'Press Start 2P',monospace;font-size:24px;color:#ffe600;text-shadow:0 0 22px rgba(255,230,0,.7)">412,880</span>
+        </div>
+      </div>
+
+      <!-- score breakdown -->
+      <div style="position:absolute;left:44px;top:398px;width:486px;background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div style="font-family:'Press Start 2P',monospace;font-size:10px;color:#8d8271;letter-spacing:.18em">BREAKDOWN</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="width:130px;font-size:16px;color:#3d372f">ライン消去</span>
+            <div style="flex:1;height:16px;background:#cdc1a9"><div style="width:64%;height:100%;background:#0090a8;transform-origin:left;animation:barGrow 3s cubic-bezier(.22,1,.36,1) infinite"></div></div>
+            <span style="width:80px;text-align:right;font-family:'Press Start 2P',monospace;font-size:11px;color:#23201c">168,400</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="width:130px;font-size:16px;color:#3d372f">コンボ倍率</span>
+            <div style="flex:1;height:16px;background:#cdc1a9"><div style="width:44%;height:100%;background:#c4116a;transform-origin:left;animation:barGrow 3s cubic-bezier(.22,1,.36,1) infinite 140ms"></div></div>
+            <span style="width:80px;text-align:right;font-family:'Press Start 2P',monospace;font-size:11px;color:#23201c">112,900</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="width:130px;font-size:16px;color:#3d372f">フィーバー</span>
+            <div style="flex:1;height:16px;background:#cdc1a9"><div style="width:38%;height:100%;background:#b58a00;transform-origin:left;animation:barGrow 3s cubic-bezier(.22,1,.36,1) infinite 280ms"></div></div>
+            <span style="width:80px;text-align:right;font-family:'Press Start 2P',monospace;font-size:11px;color:#23201c">86,300</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="width:130px;font-size:16px;color:#3d372f">爆弾ボーナス</span>
+            <div style="flex:1;height:16px;background:#cdc1a9"><div style="width:20%;height:100%;background:#8d8271;transform-origin:left;animation:barGrow 3s cubic-bezier(.22,1,.36,1) infinite 420ms"></div></div>
+            <span style="width:80px;text-align:right;font-family:'Press Start 2P',monospace;font-size:11px;color:#23201c">45,280</span>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-top:3px solid #c3b69c;padding-top:12px;margin-top:2px">
+          <span style="font-family:'Bungee',sans-serif;font-size:20px">TOTAL</span>
+          <span style="font-family:'Press Start 2P',monospace;font-size:22px;color:#c4116a">412,880</span>
+        </div>
+      </div>
+
+      <!-- ranking -->
+      <div style="position:absolute;right:44px;top:84px;width:520px;display:flex;flex-direction:column;gap:12px">
+        <div style="font-family:'Press Start 2P',monospace;font-size:10px;color:#8d8271;letter-spacing:.18em">FINAL STANDINGS</div>
+
+        <div style="display:flex;align-items:center;gap:16px;padding:16px 18px;background:#c4116a;border:3px solid #7d0b43;box-shadow:0 5px 0 #7d0b43">
+          <span style="font-family:'Bungee',sans-serif;font-size:38px;line-height:1;color:#ffe600;width:52px">1</span>
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+            <span style="font-family:'Bungee',sans-serif;font-size:24px;color:#fff">SUZU</span>
+            <div style="display:flex;gap:12px;font-family:'Press Start 2P',monospace;font-size:9px;color:#ffd6e8"><span>LINES 96</span><span>MAX COMBO 24</span></div>
+          </div>
+          <span style="font-family:'Press Start 2P',monospace;font-size:17px;color:#fff">412,880</span>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:16px;padding:16px 18px;background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c">
+          <span style="font-family:'Bungee',sans-serif;font-size:34px;line-height:1;color:#8d8271;width:52px">2</span>
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+            <span style="font-family:'Bungee',sans-serif;font-size:22px;color:#23201c">KAZ</span>
+            <div style="display:flex;gap:12px;font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271"><span>LINES 88</span><span>MAX COMBO 19</span></div>
+          </div>
+          <span style="font-family:'Press Start 2P',monospace;font-size:15px;color:#5c5347">361,220</span>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:16px;padding:16px 18px;background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c">
+          <span style="font-family:'Bungee',sans-serif;font-size:34px;line-height:1;color:#8d8271;width:52px">3</span>
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+            <span style="font-family:'Bungee',sans-serif;font-size:22px;color:#23201c">MOMO</span>
+            <div style="display:flex;gap:12px;font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271"><span>LINES 51</span><span>MAX COMBO 11</span></div>
+          </div>
+          <span style="font-family:'Press Start 2P',monospace;font-size:15px;color:#5c5347">142,600</span>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:16px;padding:16px 18px;background:#cdc1a9;border:3px solid #a89c85;box-shadow:0 5px 0 #a89c85">
+          <span style="font-family:'Bungee',sans-serif;font-size:34px;line-height:1;color:#a89c85;width:52px">4</span>
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+            <span style="font-family:'Bungee',sans-serif;font-size:22px;color:#5c5347">RIN</span>
+            <div style="display:flex;gap:12px;font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271"><span>LINES 27</span><span>K.O. 2:14</span></div>
+          </div>
+          <span style="font-family:'Press Start 2P',monospace;font-size:15px;color:#8d8271">64,150</span>
+        </div>
+
+        <div style="background:#23201c;border:3px solid #14120f;box-shadow:0 5px 0 #14120f;padding:16px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271;letter-spacing:.18em">EVENT USAGE</div>
+          <div style="display:flex;gap:12px">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px">
+              <div style="width:38px;height:38px;background:#ff2f92;display:flex;align-items:center;justify-content:center;font-size:20px;color:#180008;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)">●</div>
+              <span style="font-family:'Press Start 2P',monospace;font-size:13px;color:#fff">×6</span>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px">
+              <div style="width:38px;height:38px;background:#ff5a7a;display:flex;align-items:center;justify-content:center;font-size:19px;color:#3a000c;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)">♥</div>
+              <span style="font-family:'Press Start 2P',monospace;font-size:13px;color:#fff">×3</span>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px">
+              <div style="width:38px;height:38px;background:#ffe600;display:flex;align-items:center;justify-content:center;font-size:19px;color:#2a2000;box-shadow:inset 0 4px 0 rgba(255,255,255,.5),inset 0 -4px 0 rgba(0,0,0,.35)">◎</div>
+              <span style="font-family:'Press Start 2P',monospace;font-size:13px;color:#fff">×9</span>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px">
+              <div style="width:38px;height:38px;background:#34d94b;display:flex;align-items:center;justify-content:center;font-size:19px;color:#062d0c;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)">✦</div>
+              <span style="font-family:'Press Start 2P',monospace;font-size:13px;color:#fff">×2</span>
+            </div>
+            <div style="flex:1.4;display:flex;flex-direction:column;justify-content:center;gap:4px">
+              <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:#8d8271">FEVER 合計</span>
+              <span style="font-family:'Press Start 2P',monospace;font-size:15px;color:#ffe600">54.0s</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="position:absolute;left:0;right:0;bottom:0;height:64px;background:#e5dac3;border-top:4px solid #c3b69c;display:flex;align-items:center;justify-content:space-between;padding:0 26px">
+        <div style="display:flex;gap:12px">
+          <div style="padding:12px 22px;background:#c4116a;border:3px solid #7d0b43;box-shadow:0 4px 0 #7d0b43;font-family:'Bungee',sans-serif;font-size:17px;color:#fff;animation:menuGlow 1.38s ease-in-out infinite">もう一戦</div>
+          <div style="padding:12px 22px;background:#efe6d2;border:3px solid #c3b69c;box-shadow:0 4px 0 #c3b69c;font-family:'Bungee',sans-serif;font-size:17px;color:#5c5347">ロビーへ</div>
+          <div style="padding:12px 22px;background:#efe6d2;border:3px solid #c3b69c;box-shadow:0 4px 0 #c3b69c;font-family:'Bungee',sans-serif;font-size:17px;color:#5c5347">リプレイ保存</div>
+        </div>
+        <span style="font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271">自己ベスト更新 <span style="color:#c4116a">+100,000</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================= 3e KEYBIND ============================= -->
+  <div id="3e" style="display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:3px solid #c3b69c;padding-bottom:12px">
+      <span style="font-family:'Press Start 2P',monospace;font-size:13px;background:#c4116a;color:#fff;padding:9px 12px 7px">3e</span>
+      <span style="font-family:'Bungee',sans-serif;font-size:26px">CONFIG / KEYBIND</span>
+      <span style="font-size:17px;color:#8d8271">キー割当・マウス追従・演出強度。右にライブプレビュー。</span>
+    </div>
+
+    <div style="position:relative;width:1120px;height:720px;overflow:hidden;background:#efe6d2;border:3px solid #b8ab92;box-shadow:0 6px 0 #c3b69c,0 40px 80px rgba(35,32,28,.28)">
+      <div style="position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(35,32,28,.028) 0 2px,transparent 2px 7px);pointer-events:none"></div>
+
+      <div style="position:absolute;top:0;left:0;right:0;height:56px;background:#e5dac3;border-bottom:4px solid #c3b69c;display:flex;align-items:center;gap:8px;padding:0 26px">
+        <span style="padding:10px 16px;background:#23201c;color:#ffe600;font-family:'Press Start 2P',monospace;font-size:10px">KEYBIND</span>
+        <span style="padding:10px 16px;background:#cdc1a9;color:#5c5347;font-family:'Press Start 2P',monospace;font-size:10px">GRAPHICS</span>
+        <span style="padding:10px 16px;background:#cdc1a9;color:#5c5347;font-family:'Press Start 2P',monospace;font-size:10px">SOUND</span>
+        <span style="padding:10px 16px;background:#cdc1a9;color:#5c5347;font-family:'Press Start 2P',monospace;font-size:10px">ACCOUNT</span>
+      </div>
+
+      <!-- key list -->
+      <div style="position:absolute;left:26px;top:80px;width:604px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:14px;padding:13px 16px;background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 4px 0 #c3b69c">
+          <span style="flex:1;font-size:17px;color:#3d372f">左移動</span>
+          <span style="padding:9px 14px;background:#23201c;color:#fff;font-family:'Press Start 2P',monospace;font-size:11px;box-shadow:0 3px 0 #8d8271">A</span>
+          <span style="padding:9px 14px;background:#cdc1a9;color:#5c5347;font-family:'Press Start 2P',monospace;font-size:11px">←</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;padding:13px 16px;background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 4px 0 #c3b69c">
+          <span style="flex:1;font-size:17px;color:#3d372f">右移動</span>
+          <span style="padding:9px 14px;background:#23201c;color:#fff;font-family:'Press Start 2P',monospace;font-size:11px;box-shadow:0 3px 0 #8d8271">D</span>
+          <span style="padding:9px 14px;background:#cdc1a9;color:#5c5347;font-family:'Press Start 2P',monospace;font-size:11px">→</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;padding:13px 16px;background:#c4116a;border:3px solid #7d0b43;box-shadow:0 4px 0 #7d0b43">
+          <span style="flex:1;font-size:17px;color:#fff">ソフトドロップ</span>
+          <span style="padding:9px 18px;background:#23201c;color:#ffe600;font-family:'Press Start 2P',monospace;font-size:11px;animation:blink 690ms steps(1) infinite">キー入力待ち…</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;padding:13px 16px;background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 4px 0 #c3b69c">
+          <span style="flex:1;font-size:17px;color:#3d372f">ハードドロップ</span>
+          <span style="padding:9px 14px;background:#23201c;color:#fff;font-family:'Press Start 2P',monospace;font-size:11px;box-shadow:0 3px 0 #8d8271">SPACE</span>
+          <span style="padding:9px 14px;background:#cdc1a9;color:#5c5347;font-family:'Press Start 2P',monospace;font-size:11px">CLICK</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;padding:13px 16px;background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 4px 0 #c3b69c">
+          <span style="flex:1;font-size:17px;color:#3d372f">回転（右 / 左）</span>
+          <span style="padding:9px 14px;background:#23201c;color:#fff;font-family:'Press Start 2P',monospace;font-size:11px;box-shadow:0 3px 0 #8d8271">W</span>
+          <span style="padding:9px 14px;background:#23201c;color:#fff;font-family:'Press Start 2P',monospace;font-size:11px;box-shadow:0 3px 0 #8d8271">S</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;padding:13px 16px;background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 4px 0 #c3b69c">
+          <span style="flex:1;font-size:17px;color:#3d372f">ホールド</span>
+          <span style="padding:9px 14px;background:#23201c;color:#fff;font-family:'Press Start 2P',monospace;font-size:11px;box-shadow:0 3px 0 #8d8271">SHIFT</span>
+          <span style="padding:9px 14px;background:#cdc1a9;color:#5c5347;font-family:'Press Start 2P',monospace;font-size:11px">WHEEL</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;padding:13px 16px;background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 4px 0 #c3b69c">
+          <span style="flex:1;font-size:17px;color:#3d372f">イベントスタック発動</span>
+          <span style="padding:9px 14px;background:#23201c;color:#ff2f92;font-family:'Press Start 2P',monospace;font-size:11px;box-shadow:0 3px 0 #8d8271">E</span>
+          <span style="padding:9px 14px;background:#cdc1a9;color:#5c5347;font-family:'Press Start 2P',monospace;font-size:11px">R-CLICK</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;padding:13px 16px;background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 4px 0 #c3b69c">
+          <span style="flex:1;font-size:17px;color:#3d372f">カレントスタック破棄</span>
+          <span style="padding:9px 14px;background:#23201c;color:#fff;font-family:'Press Start 2P',monospace;font-size:11px;box-shadow:0 3px 0 #8d8271">Q</span>
+          <span style="padding:9px 14px;background:#cdc1a9;color:#a89c85;font-family:'Press Start 2P',monospace;font-size:11px">未設定</span>
+        </div>
+      </div>
+
+      <!-- right: mouse + sliders + preview -->
+      <div style="position:absolute;right:26px;top:80px;width:436px;display:flex;flex-direction:column;gap:12px">
+        <div style="background:#23201c;border:3px solid #14120f;box-shadow:0 5px 0 #14120f;padding:16px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-family:'Press Start 2P',monospace;font-size:10px;color:#ffe600;letter-spacing:.16em">MOUSE 追従</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-family:'Press Start 2P',monospace;font-size:9px;color:#34d94b">ON</span>
+              <div style="width:54px;height:26px;background:#34d94b;display:flex;align-items:center;justify-content:flex-end;padding:3px;box-shadow:0 0 20px rgba(52,217,75,.6)"><div style="width:20px;height:20px;background:#062d0c"></div></div>
+            </div>
+          </div>
+          <div style="font-size:15px;color:#e8dcc4;line-height:1.6">カーソルのX座標にミノが追従。<span style="color:#8d8271">OFFにするとA/D・←→のみ。</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px dashed #3a332c">
+            <span style="font-size:15px;color:#e8dcc4">追従の滑らかさ</span>
+            <span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#00e5ff">0.35</span>
+          </div>
+          <div style="height:10px;background:#14120f;position:relative"><div style="width:35%;height:100%;background:#00e5ff"></div><div style="position:absolute;left:35%;top:-5px;width:12px;height:20px;background:#00e5ff;box-shadow:0 0 14px rgba(0,229,255,.8)"></div></div>
+        </div>
+
+        <div style="background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-family:'Press Start 2P',monospace;font-size:10px;color:#8d8271;letter-spacing:.16em">演出強度</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:16px;color:#3d372f">画面揺れ</span><span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#c4116a">120%</span></div>
+            <div style="height:10px;background:#cdc1a9;position:relative"><div style="width:80%;height:100%;background:#c4116a"></div><div style="position:absolute;left:80%;top:-5px;width:12px;height:20px;background:#c4116a"></div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:16px;color:#3d372f">パーティクル量</span><span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#c4116a">100%</span></div>
+            <div style="height:10px;background:#cdc1a9;position:relative"><div style="width:66%;height:100%;background:#c4116a"></div><div style="position:absolute;left:66%;top:-5px;width:12px;height:20px;background:#c4116a"></div></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:16px;color:#3d372f">フラッシュ / 点滅</span><span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#c4116a">85%</span></div>
+            <div style="height:10px;background:#cdc1a9;position:relative"><div style="width:56%;height:100%;background:#c4116a"></div><div style="position:absolute;left:56%;top:-5px;width:12px;height:20px;background:#c4116a"></div></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px dashed #c3b69c">
+            <span style="font-size:16px;color:#3d372f">走査線ノイズ</span>
+            <div style="display:flex;gap:6px">
+              <span style="padding:7px 11px;background:#cdc1a9;color:#5c5347;font-family:'Press Start 2P',monospace;font-size:9px">OFF</span>
+              <span style="padding:7px 11px;background:#23201c;color:#ffe600;font-family:'Press Start 2P',monospace;font-size:9px">弱</span>
+              <span style="padding:7px 11px;background:#cdc1a9;color:#5c5347;font-family:'Press Start 2P',monospace;font-size:9px">強</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- live preview -->
+        <div style="padding:10px;background:#302b25;border-radius:12px;box-shadow:inset 0 3px 0 rgba(255,255,255,.12),0 8px 0 #1d1a16">
+          <div style="position:relative;width:416px;height:92px;background:#07040c;border:3px solid #14181c;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:16px">
+            <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px);z-index:5"></div>
+            <div style="position:absolute;left:0;right:0;height:50px;background:linear-gradient(rgba(255,255,255,.045),rgba(255,255,255,0));animation:scanSoft 6.5s linear infinite;z-index:5"></div>
+            <span style="position:relative;font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271;letter-spacing:.16em">PREVIEW</span>
+            <div style="position:relative;display:flex;gap:2px">
+              <div style="width:24px;height:24px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+              <div style="width:24px;height:24px;background:#ffe600;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+              <div style="width:24px;height:24px;background:#ff2f92;display:flex;align-items:center;justify-content:center;font-size:14px;color:#180008;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4),0 0 20px rgba(255,47,146,.8);animation:dopaPulse 900ms ease-in-out infinite">●</div>
+              <div style="width:24px;height:24px;background:#34d94b;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            </div>
+            <div style="position:relative;display:flex;align-items:flex-end;gap:4px;height:34px">
+              <div style="width:6px;background:#ff2f92;animation:eq 345ms ease-in-out infinite"></div>
+              <div style="width:6px;background:#ffe600;animation:eq 460ms ease-in-out infinite"></div>
+              <div style="width:6px;background:#00e5ff;animation:eq 290ms ease-in-out infinite"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="position:absolute;left:0;right:0;bottom:0;height:56px;background:#e5dac3;border-top:4px solid #c3b69c;display:flex;align-items:center;justify-content:space-between;padding:0 26px">
+        <span style="font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271">変更は自動保存されます</span>
+        <div style="display:flex;gap:10px">
+          <div style="padding:11px 18px;background:#efe6d2;border:3px solid #c3b69c;box-shadow:0 4px 0 #c3b69c;font-family:'Press Start 2P',monospace;font-size:10px;color:#5c5347">初期設定に戻す</div>
+          <div style="padding:11px 18px;background:#c4116a;border:3px solid #7d0b43;box-shadow:0 4px 0 #7d0b43;font-family:'Press Start 2P',monospace;font-size:10px;color:#fff">閉じる</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section>
+</x-dc>
+</body>
+</html>
