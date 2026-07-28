@@ -79,6 +79,158 @@
   @keyframes blink { 0%, 49% { opacity:1; } 50%, 100% { opacity:.18; } }
   @keyframes dopaPulse { 0%, 100% { transform:scale(1); filter:brightness(1); } 50% { transform:scale(1.06); filter:brightness(1.35); } }
   @keyframes scanSoft { 0% { transform:translateY(-100%); } 100% { transform:translateY(100%); } }
+
+  /* ---- T-SPIN ---- */
+  @keyframes tsPiece {
+    0% { transform:rotate(-90deg) scale(1.06); }
+    16% { transform:rotate(0deg) scale(1); }
+    22% { transform:rotate(0deg) scale(.9); }
+    30%, 100% { transform:rotate(0deg) scale(1); }
+  }
+  @keyframes tsOutline {
+    0%, 12% { transform:scale(1.75); opacity:0; border-width:6px; }
+    18% { transform:scale(1); opacity:1; border-width:5px; }
+    30% { transform:scale(1); opacity:1; border-width:3px; }
+    52% { transform:scale(1.02); opacity:.55; border-width:2px; }
+    70%, 100% { transform:scale(1.06); opacity:0; border-width:1px; }
+  }
+  @keyframes tsFlash { 0%, 15% { opacity:0; } 18% { opacity:1; } 34%, 100% { opacity:0; } }
+  @keyframes tsShard {
+    0%, 16% { transform:translate(0,0) scale(0); opacity:0; }
+    21% { transform:translate(calc(var(--tx) * .3), calc(var(--ty) * .3)) scale(1.4); opacity:1; }
+    58%, 100% { transform:translate(var(--tx), var(--ty)) scale(0); opacity:0; }
+  }
+  @keyframes tsBadge {
+    0%, 17% { transform:scale(2.2) rotate(-8deg); opacity:0; }
+    23% { transform:scale(1) rotate(-3deg); opacity:1; }
+    30% { transform:scale(1.12) rotate(2deg); }
+    40%, 74% { transform:scale(1) rotate(0deg); opacity:1; }
+    100% { transform:scale(.86) translateY(-22px); opacity:0; }
+  }
+
+  /* ---- TETRIS (4 lines) ---- */
+  @keyframes tetWipe {
+    0%, 6% { transform:translateX(-108%); }
+    26% { transform:translateX(108%); }
+    27%, 100% { transform:translateX(108%); }
+  }
+  @keyframes tetCharge {
+    0%, 6% { filter:brightness(1) saturate(1); transform:scaleY(1); }
+    24% { filter:brightness(2.6) saturate(.2); transform:scaleY(1.1); }
+    34% { filter:brightness(3.4) saturate(0); transform:scaleY(1.16); }
+    44% { filter:brightness(3) saturate(0); transform:scaleY(.24); opacity:1; }
+    52%, 92% { transform:scaleY(0); opacity:0; }
+    100% { filter:brightness(1) saturate(1); transform:scaleY(1); opacity:1; }
+  }
+  @keyframes tetPillar {
+    0%, 40% { transform:scaleY(0); opacity:0; }
+    48% { transform:scaleY(1); opacity:.95; }
+    72%, 100% { transform:scaleY(1.4); opacity:0; }
+  }
+  @keyframes tetWord {
+    0%, 40% { transform:scale(2.6) skewX(-14deg); opacity:0; }
+    47% { transform:scale(1) skewX(-8deg); opacity:1; }
+    54% { transform:scale(1.1) skewX(-8deg); }
+    62%, 82% { transform:scale(1) skewX(-8deg); opacity:1; }
+    100% { transform:scale(1.3) skewX(-8deg); opacity:0; }
+  }
+  @keyframes tetRing {
+    0%, 42% { transform:scale(.2); opacity:0; }
+    50% { transform:scale(1); opacity:.9; }
+    78%, 100% { transform:scale(2.1); opacity:0; }
+  }
+
+  /* ---- EVENT CLEAR VFX ---- */
+  @keyframes vfxCore {
+    0%, 14% { transform:scale(1); filter:brightness(1); }
+    22% { transform:scale(1.5); filter:brightness(3.2); }
+    34% { transform:scale(0); filter:brightness(3.2); }
+    38%, 92% { transform:scale(0); opacity:0; }
+    100% { transform:scale(1); opacity:1; filter:brightness(1); }
+  }
+  @keyframes bombWave {
+    0%, 18% { transform:scale(.1); opacity:0; }
+    26% { transform:scale(1); opacity:1; }
+    62%, 100% { transform:scale(3.1); opacity:0; }
+  }
+  @keyframes bombDebris {
+    0%, 20% { transform:translate(0,0) rotate(0) scale(1); opacity:0; }
+    24% { opacity:1; }
+    100% { transform:translate(var(--dx), var(--dy)) rotate(300deg) scale(.2); opacity:0; }
+  }
+  @keyframes heartFloat {
+    0%, 20% { transform:translateY(0) scale(0); opacity:0; }
+    28% { transform:translateY(-14px) scale(1.3); opacity:1; }
+    100% { transform:translateY(-96px) scale(.7); opacity:0; }
+  }
+  @keyframes heartAura {
+    0%, 18% { transform:scale(.3); opacity:0; }
+    28% { transform:scale(1.1); opacity:.85; }
+    70%, 100% { transform:scale(1.9); opacity:0; }
+  }
+  @keyframes coinSpin {
+    0%, 18% { transform:translate(0,0) rotateY(0) scale(.4); opacity:0; }
+    26% { transform:translate(calc(var(--cx) * .4), -46px) rotateY(360deg) scale(1); opacity:1; }
+    100% { transform:translate(var(--cx), 42px) rotateY(1080deg) scale(.85); opacity:0; }
+  }
+  @keyframes coinSlow {
+    0%, 24% { transform:scaleX(0); opacity:0; }
+    34% { transform:scaleX(1); opacity:1; }
+    84%, 100% { transform:scaleX(1); opacity:0; }
+  }
+  @keyframes cloverSwirl {
+    0%, 18% { transform:rotate(0) translateX(0) scale(0); opacity:0; }
+    28% { transform:rotate(180deg) translateX(34px) scale(1.2); opacity:1; }
+    100% { transform:rotate(760deg) translateX(76px) scale(.4); opacity:0; }
+  }
+  @keyframes cloverBeam {
+    0%, 20% { transform:scaleY(0); opacity:0; }
+    30% { transform:scaleY(1); opacity:.9; }
+    66%, 100% { transform:scaleY(1.3); opacity:0; }
+  }
+
+  /* ---- FEVER CASH CANNON ---- */
+  @keyframes cashL {
+    0% { transform:translate(0,0) rotate(0) scale(.7); opacity:0; }
+    6% { opacity:1; }
+    46% { transform:translate(calc(var(--px) * .58), var(--peak)) rotate(320deg) scale(1); }
+    100% { transform:translate(var(--px), 60px) rotate(760deg) scale(.8); opacity:0; }
+  }
+  @keyframes muzzle { 0%, 88% { transform:scale(0); opacity:0; } 92% { transform:scale(1.5); opacity:.9; } 100% { transform:scale(2.4); opacity:0; } }
+
+  /* ---- SCORE POPUP AT CLEAR SITE ---- */
+  @keyframes scoreSlam {
+    0%, 10% { transform:scale(3.4) rotate(-10deg); opacity:0; filter:blur(6px); }
+    17% { transform:scale(1) rotate(-4deg); opacity:1; filter:blur(0); }
+    23% { transform:scale(1.16) rotate(2deg); }
+    31% { transform:scale(1) rotate(0deg); }
+    64% { transform:scale(1) translateY(0); opacity:1; }
+    100% { transform:scale(.9) translateY(-72px); opacity:0; }
+  }
+  @keyframes scoreDigits {
+    0%, 20% { transform:translateY(10px) scale(.6); opacity:0; }
+    28% { transform:translateY(0) scale(1.2); opacity:1; }
+    36% { transform:translateY(0) scale(1); }
+    66% { opacity:1; }
+    100% { transform:translateY(-52px) scale(1); opacity:0; }
+  }
+  @keyframes scoreTag {
+    0%, 26% { transform:translateX(-14px) scale(.7); opacity:0; }
+    34% { transform:translateX(0) scale(1.08); opacity:1; }
+    42% { transform:translateX(0) scale(1); }
+    68% { opacity:1; }
+    100% { transform:translateX(0) translateY(-44px); opacity:0; }
+  }
+  @keyframes scoreStreak {
+    0%, 12% { transform:scaleX(0); opacity:0; }
+    19% { transform:scaleX(1); opacity:1; }
+    46%, 100% { transform:scaleX(1.6); opacity:0; }
+  }
+  @keyframes scoreSpark {
+    0%, 14% { transform:translate(0,0) scale(0); opacity:0; }
+    20% { transform:translate(calc(var(--sx) * .35), calc(var(--sy) * .35)) scale(1.3); opacity:1; }
+    72%, 100% { transform:translate(var(--sx), var(--sy)) scale(0); opacity:0; }
+  }
 </style>
 </helmet>
 
@@ -89,6 +241,7 @@
     <div style="display:flex;align-items:center;gap:14px">
       <span style="font-family:'Press Start 2P',monospace;font-size:12px;background:#23201c;color:#ffe600;padding:9px 12px 7px">2a</span>
       <span style="font-family:'Press Start 2P',monospace;font-size:11px;letter-spacing:.2em;color:#8d8271">DESIGN &amp; MOTION SPEC — for Claude Code</span>
+      <a href="#5a" style="font-family:'Press Start 2P',monospace;font-size:10px;color:#c4116a;border:0">→ 05 HYPE MOMENTS</a>
     </div>
     <h1 style="margin:0;font-family:'Bungee',sans-serif;font-size:72px;line-height:.94;letter-spacing:.01em;text-wrap:balance">ドパガキテトリス<br><span style="color:#c4116a">SPEC SHEET</span></h1>
     <p style="margin:0;font-size:20px;line-height:1.75;color:#5c5347;max-width:900px;text-wrap:pretty">1a（CRTアーケード）のネオン発光をベースに、外側の面はクリーム樹脂へ。<strong>光るのはブラウン管の中だけ</strong>という原則で統一する。走査線ノイズは弱め、ミノには一切かけない。以下のトークン・タイル・モーション値をそのまま実装値として使用してよい。</p>
@@ -124,8 +277,8 @@
       <div style="position:absolute;left:26px;top:88px;width:250px;display:flex;flex-direction:column;gap:16px">
         <div style="background:#e5dac3;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:14px">
           <div style="font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271;letter-spacing:.18em;margin-bottom:12px">HOLD ×1</div>
-          <div style="display:flex;justify-content:center">
-            <div style="width:132px;height:80px;background:#0f0a18;display:flex;align-items:center;justify-content:center">
+          <div style="display:flex;gap:10px">
+            <div style="flex:1;height:80px;background:#0f0a18;display:flex;align-items:center;justify-content:center">
               <div style="display:grid;grid-template-columns:repeat(2,20px);grid-auto-rows:20px;gap:2px">
                 <div style="background:#ffe600;box-shadow:inset 0 3px 0 rgba(255,255,255,.5),inset 0 -3px 0 rgba(0,0,0,.35)"></div>
                 <div style="background:#ffe600;box-shadow:inset 0 3px 0 rgba(255,255,255,.5),inset 0 -3px 0 rgba(0,0,0,.35)"></div>
@@ -133,6 +286,7 @@
                 <div style="background:#ffe600;box-shadow:inset 0 3px 0 rgba(255,255,255,.5),inset 0 -3px 0 rgba(0,0,0,.35)"></div>
               </div>
             </div>
+            <div style="flex:1;height:80px;background:#cdc1a9;border:2px dashed #a89c85;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:8px;color:#8d8271">HOLD</div>
           </div>
         </div>
 
@@ -597,10 +751,279 @@
     </div>
   </div>
 
+  <!-- ===== 06 hype moments ===== -->
+  <div id="5a" style="display:flex;flex-direction:column;gap:22px">
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:3px solid #c3b69c;padding-bottom:12px">
+      <span style="font-family:'Press Start 2P',monospace;font-size:22px;color:#c4116a">05</span>
+      <span style="font-family:'Bungee',sans-serif;font-size:28px">HYPE MOMENTS</span>
+      <span style="font-size:17px;color:#8d8271">T-SPIN・TETRIS・イベント消去VFX・スコアポップ・フィーバー現金砲</span>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:28px">
+
+      <!-- H: T-SPIN -->
+      <div style="width:548px;background:#efe6d2;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#c4116a">H</span><span style="font-family:'Bungee',sans-serif;font-size:20px">T-SPIN：カチッとはまる一瞬</span></div>
+        <div style="position:relative;height:250px;background:#07040c;overflow:hidden">
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px)"></div>
+          <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 56%,rgba(168,85,255,.35),rgba(168,85,255,0) 60%);animation:tsFlash 2.4s ease-out infinite;z-index:2"></div>
+
+          <div style="position:absolute;left:50%;top:74px;transform:translateX(-50%);width:112px;height:84px">
+            <div style="position:absolute;left:0;top:0;width:26px;height:26px;background:#5c5347;box-shadow:inset 0 4px 0 rgba(255,255,255,.2),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:84px;top:0;width:26px;height:26px;background:#5c5347;box-shadow:inset 0 4px 0 rgba(255,255,255,.2),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:0;top:28px;width:26px;height:26px;background:#5c5347;box-shadow:inset 0 4px 0 rgba(255,255,255,.2),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:84px;top:28px;width:26px;height:26px;background:#5c5347;box-shadow:inset 0 4px 0 rgba(255,255,255,.2),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:0;top:56px;width:26px;height:26px;background:#5c5347;box-shadow:inset 0 4px 0 rgba(255,255,255,.2),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+            <div style="position:absolute;left:84px;top:56px;width:26px;height:26px;background:#5c5347;box-shadow:inset 0 4px 0 rgba(255,255,255,.2),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+
+            <div style="position:absolute;left:28px;top:14px;width:56px;height:56px;transform-origin:50% 50%;animation:tsPiece 2.4s cubic-bezier(.16,1.5,.3,1) infinite">
+              <div style="position:absolute;left:0;top:0;width:26px;height:26px;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.5),inset 0 -4px 0 rgba(0,0,0,.4),0 0 16px rgba(168,85,255,.8)"></div>
+              <div style="position:absolute;left:28px;top:0;width:26px;height:26px;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.5),inset 0 -4px 0 rgba(0,0,0,.4),0 0 16px rgba(168,85,255,.8)"></div>
+              <div style="position:absolute;left:0;top:28px;width:26px;height:26px;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.5),inset 0 -4px 0 rgba(0,0,0,.4),0 0 16px rgba(168,85,255,.8)"></div>
+              <div style="position:absolute;left:28px;top:28px;width:26px;height:26px;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.5),inset 0 -4px 0 rgba(0,0,0,.4),0 0 16px rgba(168,85,255,.8)"></div>
+            </div>
+
+            <div style="position:absolute;left:24px;top:10px;width:64px;height:64px;border:5px solid #fff;box-shadow:0 0 26px rgba(255,255,255,.95),inset 0 0 18px rgba(168,85,255,.8);animation:tsOutline 2.4s cubic-bezier(.16,1.4,.3,1) infinite"></div>
+
+            <div style="position:absolute;left:52px;top:38px;width:7px;height:7px;background:#fff;--tx:-72px;--ty:-52px;animation:tsShard 2.4s cubic-bezier(.1,.9,.3,1) infinite"></div>
+            <div style="position:absolute;left:52px;top:38px;width:7px;height:7px;background:#a855ff;--tx:74px;--ty:-46px;animation:tsShard 2.4s cubic-bezier(.1,.9,.3,1) infinite"></div>
+            <div style="position:absolute;left:52px;top:38px;width:6px;height:6px;background:#00e5ff;--tx:-84px;--ty:26px;animation:tsShard 2.4s cubic-bezier(.1,.9,.3,1) infinite"></div>
+            <div style="position:absolute;left:52px;top:38px;width:6px;height:6px;background:#fff;--tx:80px;--ty:34px;animation:tsShard 2.4s cubic-bezier(.1,.9,.3,1) infinite"></div>
+            <div style="position:absolute;left:52px;top:38px;width:5px;height:5px;background:#ffe600;--tx:-14px;--ty:-78px;animation:tsShard 2.4s cubic-bezier(.1,.9,.3,1) infinite"></div>
+            <div style="position:absolute;left:52px;top:38px;width:5px;height:5px;background:#ffe600;--tx:22px;--ty:72px;animation:tsShard 2.4s cubic-bezier(.1,.9,.3,1) infinite"></div>
+          </div>
+
+          <div style="position:absolute;left:50%;top:184px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;z-index:3;animation:tsBadge 2.4s cubic-bezier(.16,1.5,.3,1) infinite">
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 14px;background:#a855ff;border:3px solid #fff;box-shadow:0 0 30px rgba(168,85,255,.9)">
+              <span style="font-family:'Bungee',sans-serif;font-size:22px;color:#fff;letter-spacing:.06em">T-SPIN</span>
+              <span style="font-family:'Press Start 2P',monospace;font-size:13px;color:#ffe600">DOUBLE</span>
+            </div>
+            <span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#00e5ff">PERFECT LOCK</span>
+          </div>
+        </div>
+        <div style="font-size:15px;line-height:1.8;color:#3d372f">
+          回転→固定を <strong>1フレームで止める</strong>のが要点。回転 <strong>90ms</strong> <code style="font-family:'Press Start 2P',monospace;font-size:10px">cubic-bezier(.16,1.5,.3,1)</code>、着地でミノが <strong>scale .90</strong> に一瞬潰れる（40ms）。<br>
+          <strong>クリアアウトライン</strong>：はまった穴の形に沿った白枠が <strong>scale 1.75 → 1.00</strong>（<strong>140ms</strong>）でカチッと収縮、線幅 6→2px、その後 <strong>320ms</strong> でフェード。<br>
+          同フレームで <strong>紫フラッシュ 60ms</strong>＋<strong>6〜10片</strong>の破片を全方位に <strong>560ms</strong>。<br>
+          バッジは <strong>scale 2.2 → 1</strong> のスラムイン（150ms）＋2°の首振り、0.9秒保持して上へ抜ける。SINGLE/DOUBLE/TRIPLE で枠色を <span style="color:#0090a8">シアン</span>→<span style="color:#c4116a">マゼンタ</span>→<span style="color:#b58a00">ゴールド</span>に昇格。シェイク <strong>10px / 160ms</strong>。
+        </div>
+      </div>
+
+      <!-- I: TETRIS -->
+      <div style="width:548px;background:#efe6d2;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#c4116a">I</span><span style="font-family:'Bungee',sans-serif;font-size:20px">4列消し：チャージ→白飛び→圧縮</span></div>
+        <div style="position:relative;height:250px;background:#07040c;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px)"></div>
+
+          <div style="position:relative;display:flex;gap:2px;transform-origin:center;animation:tetCharge 2.8s cubic-bezier(.3,.9,.2,1) infinite 0ms">
+            <div style="width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#ffe600;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#ff2f92;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#34d94b;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#ff5a2f;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#3a7bff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#ffe600;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#34d94b;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+          </div>
+          <div style="position:relative;display:flex;gap:2px;transform-origin:center;animation:tetCharge 2.8s cubic-bezier(.3,.9,.2,1) infinite 55ms">
+            <div style="width:26px;height:26px;background:#ff5a2f;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#3a7bff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#ffe600;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#ff2f92;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#34d94b;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#ff5a2f;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#3a7bff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+          </div>
+          <div style="position:relative;display:flex;gap:2px;transform-origin:center;animation:tetCharge 2.8s cubic-bezier(.3,.9,.2,1) infinite 110ms">
+            <div style="width:26px;height:26px;background:#34d94b;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#ff2f92;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#ffe600;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#ff5a2f;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#3a7bff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#ffe600;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#ff2f92;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+          </div>
+          <div style="position:relative;display:flex;gap:2px;transform-origin:center;animation:tetCharge 2.8s cubic-bezier(.3,.9,.2,1) infinite 165ms">
+            <div style="width:26px;height:26px;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#34d94b;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#ff5a2f;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#ffe600;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#3a7bff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#ff2f92;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#34d94b;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#a855ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div><div style="width:26px;height:26px;background:#00e5ff;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4)"></div>
+          </div>
+
+          <div style="position:absolute;left:0;top:60px;width:100%;height:120px;overflow:hidden;z-index:3;pointer-events:none">
+            <div style="width:100%;height:100%;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.95) 45%,rgba(0,229,255,.9) 55%,rgba(255,255,255,0));animation:tetWipe 2.8s cubic-bezier(.4,0,.2,1) infinite"></div>
+          </div>
+
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:300px;height:130px;border:4px solid #ffe600;border-radius:50%;box-shadow:0 0 40px rgba(255,230,0,.8);z-index:3;animation:tetRing 2.8s cubic-bezier(.2,.9,.3,1) infinite"></div>
+          <div style="position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:290px;height:180px;background:linear-gradient(rgba(255,230,0,0),rgba(255,230,0,.5));transform-origin:bottom;z-index:2;animation:tetPillar 2.8s cubic-bezier(.2,.9,.3,1) infinite"></div>
+
+          <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:4;display:flex;flex-direction:column;align-items:center;gap:4px;animation:tetWord 2.8s cubic-bezier(.16,1.5,.3,1) infinite">
+            <span style="font-family:'Bungee',sans-serif;font-size:52px;line-height:.9;color:#fff;text-shadow:0 0 34px rgba(255,230,0,1),0 5px 0 #b58a00;letter-spacing:.04em">TETRIS</span>
+            <span style="font-family:'Press Start 2P',monospace;font-size:14px;color:#ffe600">4 LINES</span>
+          </div>
+        </div>
+        <div style="font-size:15px;line-height:1.8;color:#3d372f">
+          左からのポップ消去とは<strong>別演出</strong>。①<strong>チャージ 240ms</strong>：4行が下から順（55ms差）に brightness 1→3.4／彩度0へ白飛び、scaleY 1.16 に膨らむ。②<strong>白い横スイープ</strong>が4行を <strong>200ms</strong> で貫通（<code style="font-family:'Press Start 2P',monospace;font-size:10px">cubic-bezier(.4,0,.2,1)</code>）。③スイープ通過後 <strong>140ms</strong> で scaleY 0.24 → 0 に<strong>圧縮消滅</strong>。<br>
+          同時に<strong>金色リング</strong>が横楕円で拡散（280ms）＋盤面下から<strong>光の柱</strong>が立ち上がる（340ms）。<br>
+          文字は skew -8° で <strong>scale 2.6 → 1</strong> スラム（170ms）、0.85秒保持。<br>
+          シェイク <strong>20px / 300ms ＋ 回転0.7°</strong>。落下再開は圧縮完了から <strong>60ms</strong> 後（タメを作る）。
+        </div>
+      </div>
+
+      <!-- J: score popup -->
+      <div style="width:548px;background:#efe6d2;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#c4116a">J</span><span style="font-family:'Bungee',sans-serif;font-size:20px">スコアポップ：消した場所に叩き出す</span></div>
+        <div style="position:relative;height:250px;background:#07040c;overflow:hidden">
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px)"></div>
+          <div style="position:absolute;left:50%;top:150px;transform:translateX(-50%);display:flex;gap:2px;opacity:.4">
+            <div style="width:26px;height:26px;background:#3a332c"></div><div style="width:26px;height:26px;background:#3a332c"></div><div style="width:26px;height:26px;background:#3a332c"></div><div style="width:26px;height:26px;background:#3a332c"></div><div style="width:26px;height:26px;background:#3a332c"></div><div style="width:26px;height:26px;background:#3a332c"></div><div style="width:26px;height:26px;background:#3a332c"></div><div style="width:26px;height:26px;background:#3a332c"></div><div style="width:26px;height:26px;background:#3a332c"></div><div style="width:26px;height:26px;background:#3a332c"></div>
+          </div>
+
+          <div style="position:absolute;left:50%;top:163px;transform:translateX(-50%);width:300px;height:6px;background:linear-gradient(90deg,rgba(255,230,0,0),#fff,rgba(255,230,0,0));animation:scoreStreak 2.6s ease-out infinite"></div>
+
+          <div style="position:absolute;left:50%;top:60px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;z-index:3">
+            <div style="display:flex;align-items:baseline;gap:8px;animation:scoreSlam 2.6s cubic-bezier(.16,1.5,.3,1) infinite">
+              <span style="font-family:'Bungee',sans-serif;font-size:26px;line-height:1;color:#ffe600;text-shadow:0 0 20px rgba(255,230,0,.9)">+</span>
+              <span style="font-family:'Bungee',sans-serif;font-size:62px;line-height:.9;color:#fff;text-shadow:0 0 34px rgba(255,230,0,1),0 5px 0 #b58a00;letter-spacing:.02em">12,800</span>
+            </div>
+            <div style="display:flex;gap:8px;animation:scoreDigits 2.6s cubic-bezier(.2,1.4,.3,1) infinite">
+              <span style="padding:5px 9px;background:#ffe600;color:#2a2000;font-family:'Press Start 2P',monospace;font-size:11px">TETRIS</span>
+              <span style="padding:5px 9px;background:#ff2f92;color:#fff;font-family:'Press Start 2P',monospace;font-size:11px">×2.70</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:center;animation:scoreTag 2.6s cubic-bezier(.2,1.4,.3,1) infinite">
+              <span style="font-family:'Press Start 2P',monospace;font-size:10px;color:#00e5ff">COMBO 18 / FEVER ×1.5</span>
+            </div>
+          </div>
+
+          <div style="position:absolute;left:50%;top:166px;width:7px;height:7px;background:#ffe600;--sx:-118px;--sy:-64px;animation:scoreSpark 2.6s cubic-bezier(.1,.9,.3,1) infinite"></div>
+          <div style="position:absolute;left:50%;top:166px;width:7px;height:7px;background:#fff;--sx:112px;--sy:-58px;animation:scoreSpark 2.6s cubic-bezier(.1,.9,.3,1) infinite"></div>
+          <div style="position:absolute;left:50%;top:166px;width:6px;height:6px;background:#ff2f92;--sx:-76px;--sy:-96px;animation:scoreSpark 2.6s cubic-bezier(.1,.9,.3,1) infinite"></div>
+          <div style="position:absolute;left:50%;top:166px;width:6px;height:6px;background:#00e5ff;--sx:84px;--sy:-92px;animation:scoreSpark 2.6s cubic-bezier(.1,.9,.3,1) infinite"></div>
+          <div style="position:absolute;left:50%;top:166px;width:5px;height:5px;background:#ffe600;--sx:-142px;--sy:12px;animation:scoreSpark 2.6s cubic-bezier(.1,.9,.3,1) infinite"></div>
+          <div style="position:absolute;left:50%;top:166px;width:5px;height:5px;background:#ffe600;--sx:138px;--sy:18px;animation:scoreSpark 2.6s cubic-bezier(.1,.9,.3,1) infinite"></div>
+        </div>
+        <div style="font-size:15px;line-height:1.8;color:#3d372f">
+          出現位置は<strong>消えた行の中心</strong>（複数行なら重心）。盤面座標に紐づけて表示し、そこから上へ抜ける。<br>
+          数字：<strong>scale 3.4 → 1.0</strong>（blur 6px → 0、<strong>180ms</strong>）でズドンと着弾 → 1.16 のオーバーシュート → 0.85秒保持 → 上へ <strong>72px</strong> 移動しながらフェード（計 <strong>1.6s</strong>）。<br>
+          内訳タグ（TETRIS / ×倍率 / COMBO）は <strong>80ms 差</strong>で下から順にライズイン。<br>
+          <strong>2列以上のみ</strong>表示（1列は既存の小ポップ）。段階で色を昇格：2列 <span style="color:#0090a8">シアン</span>／3列 <span style="color:#c4116a">マゼンタ</span>／4列・T-SPIN <span style="color:#b58a00">ゴールド＋金縁</span>。フィーバー中は文字がビート（345ms）で微振動。
+        </div>
+      </div>
+
+      <!-- K: event clear VFX -->
+      <div style="width:1124px;background:#23201c;border:3px solid #14120f;box-shadow:0 5px 0 #14120f;padding:22px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#ffe600">K</span><span style="font-family:'Bungee',sans-serif;font-size:20px;color:#fff">イベントミノを消した瞬間のVFX（4種）</span><span style="font-size:15px;color:#8d8271">ポップ消去がそのタイルに到達したフレームで発火。スタック加算の合図。</span></div>
+
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+
+          <!-- bomb -->
+          <div style="flex:1;min-width:256px;display:flex;flex-direction:column;gap:10px">
+            <div style="position:relative;height:190px;background:#07040c;overflow:hidden;display:flex;align-items:center;justify-content:center">
+              <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px)"></div>
+              <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:120px;height:120px;border:5px solid #ff2f92;border-radius:50%;box-shadow:0 0 34px rgba(255,47,146,.9);animation:bombWave 2.4s cubic-bezier(.2,.9,.3,1) infinite"></div>
+              <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:90px;height:90px;border:3px solid #ffe600;border-radius:50%;animation:bombWave 2.4s cubic-bezier(.2,.9,.3,1) infinite 80ms"></div>
+              <div style="position:relative;width:30px;height:30px;background:#ff2f92;display:flex;align-items:center;justify-content:center;font-size:17px;color:#180008;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:vfxCore 2.4s cubic-bezier(.2,1.5,.35,1) infinite">●</div>
+              <div style="position:absolute;left:50%;top:50%;width:8px;height:8px;background:#ff2f92;--dx:-78px;--dy:-52px;animation:bombDebris 2.4s cubic-bezier(.15,.85,.25,1) infinite"></div>
+              <div style="position:absolute;left:50%;top:50%;width:8px;height:8px;background:#ffe600;--dx:76px;--dy:-58px;animation:bombDebris 2.4s cubic-bezier(.15,.85,.25,1) infinite"></div>
+              <div style="position:absolute;left:50%;top:50%;width:7px;height:7px;background:#fff;--dx:-92px;--dy:34px;animation:bombDebris 2.4s cubic-bezier(.15,.85,.25,1) infinite"></div>
+              <div style="position:absolute;left:50%;top:50%;width:7px;height:7px;background:#ff2f92;--dx:88px;--dy:42px;animation:bombDebris 2.4s cubic-bezier(.15,.85,.25,1) infinite"></div>
+              <div style="position:absolute;left:50%;top:50%;width:6px;height:6px;background:#ffe600;--dx:-6px;--dy:-84px;animation:bombDebris 2.4s cubic-bezier(.15,.85,.25,1) infinite"></div>
+              <div style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);font-family:'Press Start 2P',monospace;font-size:9px;color:#ff2f92">BOMB +1</div>
+            </div>
+            <div style="font-size:14px;line-height:1.7;color:#e8dcc4"><strong style="color:#ff2f92">爆弾</strong>：二重の衝撃リング（マゼンタ→イエロー、80ms差）が <strong>380ms</strong> で 3.1倍に拡散。破片<strong>8個</strong>を放物線で <strong>480ms</strong>。短い赤フラッシュ 50ms。シェイク 8px。</div>
+          </div>
+
+          <!-- heart -->
+          <div style="flex:1;min-width:256px;display:flex;flex-direction:column;gap:10px">
+            <div style="position:relative;height:190px;background:#07040c;overflow:hidden;display:flex;align-items:center;justify-content:center">
+              <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px)"></div>
+              <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:130px;height:130px;border-radius:50%;background:radial-gradient(circle,rgba(255,90,122,.55),rgba(255,90,122,0) 70%);animation:heartAura 2.4s cubic-bezier(.2,.9,.3,1) infinite"></div>
+              <div style="position:relative;width:30px;height:30px;background:#ff5a7a;display:flex;align-items:center;justify-content:center;font-size:17px;color:#3a000c;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:vfxCore 2.4s cubic-bezier(.2,1.5,.35,1) infinite">♥</div>
+              <div style="position:absolute;left:34%;bottom:56px;font-size:20px;color:#ff5a7a;animation:heartFloat 2.4s cubic-bezier(.2,.9,.4,1) infinite">♥</div>
+              <div style="position:absolute;left:50%;bottom:52px;font-size:26px;color:#fff;animation:heartFloat 2.4s cubic-bezier(.2,.9,.4,1) infinite 90ms">♥</div>
+              <div style="position:absolute;left:64%;bottom:58px;font-size:17px;color:#ffe600;animation:heartFloat 2.4s cubic-bezier(.2,.9,.4,1) infinite 180ms">♥</div>
+              <div style="position:absolute;left:42%;bottom:60px;font-size:14px;color:#ff5a7a;animation:heartFloat 2.4s cubic-bezier(.2,.9,.4,1) infinite 260ms">♥</div>
+              <div style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);font-family:'Press Start 2P',monospace;font-size:9px;color:#ff5a7a">HEART +1</div>
+            </div>
+            <div style="font-size:14px;line-height:1.7;color:#e8dcc4"><strong style="color:#ff5a7a">ハート</strong>：柔らかいピンクのオーラが <strong>420ms</strong> で膨張。ハート<strong>4〜6個</strong>が <strong>90ms 差</strong>でふわりと上昇（<strong>720ms</strong>、横に軽く蛇行）。爆発感は出さず、<strong>回復のニュアンス</strong>。シェイクなし。</div>
+          </div>
+
+          <!-- coin -->
+          <div style="flex:1;min-width:256px;display:flex;flex-direction:column;gap:10px">
+            <div style="position:relative;height:190px;background:#07040c;overflow:hidden;display:flex;align-items:center;justify-content:center">
+              <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px)"></div>
+              <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:210px;height:5px;background:linear-gradient(90deg,rgba(255,230,0,0),#ffe600,rgba(255,230,0,0));box-shadow:0 0 22px rgba(255,230,0,.9);animation:coinSlow 2.4s cubic-bezier(.2,.9,.3,1) infinite"></div>
+              <div style="position:relative;width:30px;height:30px;background:#ffe600;display:flex;align-items:center;justify-content:center;font-size:17px;color:#2a2000;box-shadow:inset 0 4px 0 rgba(255,255,255,.5),inset 0 -4px 0 rgba(0,0,0,.35);animation:vfxCore 2.4s cubic-bezier(.2,1.5,.35,1) infinite">◎</div>
+              <div style="position:absolute;left:50%;top:50%;width:20px;height:20px;border-radius:50%;background:#ffe600;box-shadow:inset 0 -3px 0 rgba(0,0,0,.3);--cx:-86px;animation:coinSpin 2.4s cubic-bezier(.2,.85,.4,1) infinite"></div>
+              <div style="position:absolute;left:50%;top:50%;width:16px;height:16px;border-radius:50%;background:#ffd23f;box-shadow:inset 0 -3px 0 rgba(0,0,0,.3);--cx:-42px;animation:coinSpin 2.4s cubic-bezier(.2,.85,.4,1) infinite 70ms"></div>
+              <div style="position:absolute;left:50%;top:50%;width:22px;height:22px;border-radius:50%;background:#ffe600;box-shadow:inset 0 -3px 0 rgba(0,0,0,.3);--cx:44px;animation:coinSpin 2.4s cubic-bezier(.2,.85,.4,1) infinite 140ms"></div>
+              <div style="position:absolute;left:50%;top:50%;width:15px;height:15px;border-radius:50%;background:#b58a00;--cx:88px;animation:coinSpin 2.4s cubic-bezier(.2,.85,.4,1) infinite 210ms"></div>
+              <div style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);font-family:'Press Start 2P',monospace;font-size:9px;color:#ffe600">COIN +1</div>
+            </div>
+            <div style="font-size:14px;line-height:1.7;color:#e8dcc4"><strong style="color:#ffe600">コイン</strong>：金貨<strong>4〜6枚</strong>が <strong>rotateY 1080°</strong> しながら左右に散って落下（<strong>760ms</strong>）。同時に<strong>金の水平ライン</strong>が横に伸び、"落下が緩む"合図として <strong>500ms</strong> 残る。</div>
+          </div>
+
+          <!-- clover -->
+          <div style="flex:1;min-width:256px;display:flex;flex-direction:column;gap:10px">
+            <div style="position:relative;height:190px;background:#07040c;overflow:hidden;display:flex;align-items:center;justify-content:center">
+              <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px)"></div>
+              <div style="position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:120px;height:190px;background:linear-gradient(rgba(52,217,75,0),rgba(52,217,75,.5));transform-origin:bottom;animation:cloverBeam 2.4s cubic-bezier(.2,.9,.3,1) infinite"></div>
+              <div style="position:relative;width:30px;height:30px;background:#34d94b;display:flex;align-items:center;justify-content:center;font-size:17px;color:#062d0c;box-shadow:inset 0 4px 0 rgba(255,255,255,.45),inset 0 -4px 0 rgba(0,0,0,.4);animation:vfxCore 2.4s cubic-bezier(.2,1.5,.35,1) infinite">✦</div>
+              <div style="position:absolute;left:50%;top:50%;font-size:18px;color:#34d94b;animation:cloverSwirl 2.4s cubic-bezier(.25,.9,.35,1) infinite">✦</div>
+              <div style="position:absolute;left:50%;top:50%;font-size:15px;color:#ffe600;animation:cloverSwirl 2.4s cubic-bezier(.25,.9,.35,1) infinite 90ms">✦</div>
+              <div style="position:absolute;left:50%;top:50%;font-size:20px;color:#fff;animation:cloverSwirl 2.4s cubic-bezier(.25,.9,.35,1) infinite 180ms">✦</div>
+              <div style="position:absolute;left:50%;top:50%;font-size:14px;color:#34d94b;animation:cloverSwirl 2.4s cubic-bezier(.25,.9,.35,1) infinite 270ms">✦</div>
+              <div style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);font-family:'Press Start 2P',monospace;font-size:9px;color:#34d94b">CLOVER +1</div>
+            </div>
+            <div style="font-size:14px;line-height:1.7;color:#e8dcc4"><strong style="color:#34d94b">クローバー</strong>：緑の<strong>光柱</strong>が真上に立ち（<strong>340ms</strong>）、星が<strong>螺旋</strong>を描いて外へ飛ぶ（760°回転・<strong>820ms</strong>）。4種で最も長く、当たりの特別感を出す。</div>
+          </div>
+        </div>
+        <div style="font-size:15px;line-height:1.7;color:#8d8271;border-top:1px dashed #3a332c;padding-top:14px">共通：発火は<strong>ポップ消去のそのセル</strong>と同フレーム（左からの 45ms グリッドに乗る）。スタックUIの該当スロットが同時に <strong>scale 1.4 → 1</strong> で着弾。同一ライン内に複数イベントがある場合は左から順に連発し、<strong>3個目以降は音程のみ上げてVFXは50%に間引く</strong>。</div>
+      </div>
+
+      <!-- L: fever cash cannon -->
+      <div style="width:1124px;background:#efe6d2;border:3px solid #c3b69c;box-shadow:0 5px 0 #c3b69c;padding:22px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'Press Start 2P',monospace;font-size:11px;color:#c4116a">L</span><span style="font-family:'Bungee',sans-serif;font-size:20px">フィーバー現金砲：左右下から等間隔で撃ち上げ</span></div>
+
+        <div style="position:relative;height:400px;background:#07040c;overflow:hidden">
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(rgba(0,0,0,.14) 0 1px,rgba(0,0,0,0) 1px 4px)"></div>
+          <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 70%,rgba(255,47,146,.3),rgba(255,47,146,0) 62%);animation:dopaPulse 690ms ease-in-out infinite"></div>
+
+          <div style="position:absolute;left:50%;top:40px;transform:translateX(-50%);display:flex;align-items:center;gap:14px;padding:10px 22px;background:linear-gradient(90deg,#ff2f92,#ffe600);box-shadow:0 0 44px rgba(255,47,146,.7);z-index:4;animation:dopaPulse 690ms ease-in-out infinite">
+            <span style="font-family:'Bungee',sans-serif;font-size:26px;color:#1a0010">FEVER TIME</span>
+            <span style="font-family:'Press Start 2P',monospace;font-size:17px;color:#1a0010">9.0</span>
+          </div>
+
+          <div style="position:absolute;left:50%;top:120px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;z-index:4">
+            <span style="font-family:'Bungee',sans-serif;font-size:64px;line-height:.9;color:#fff;text-shadow:0 0 30px rgba(255,230,0,1),0 5px 0 #b58a00;animation:comboPop 1.38s cubic-bezier(.2,1.6,.3,1) infinite">24</span>
+            <span style="font-family:'Press Start 2P',monospace;font-size:12px;color:#ffe600">COMBO</span>
+          </div>
+
+          <!-- muzzles -->
+          <div style="position:absolute;left:-10px;bottom:-10px;width:90px;height:90px;border-radius:50%;background:radial-gradient(circle,rgba(255,230,0,.85),rgba(255,230,0,0) 70%);animation:muzzle 1.38s ease-out infinite"></div>
+          <div style="position:absolute;right:-10px;bottom:-10px;width:90px;height:90px;border-radius:50%;background:radial-gradient(circle,rgba(255,230,0,.85),rgba(255,230,0,0) 70%);animation:muzzle 1.38s ease-out infinite 690ms"></div>
+
+          <!-- left cannon volley -->
+          <div style="position:absolute;left:16px;bottom:8px;width:26px;height:26px;border-radius:50%;background:#ffe600;box-shadow:inset 0 -4px 0 rgba(0,0,0,.3),0 0 16px rgba(255,230,0,.8);--px:300px;--peak:-300px;animation:cashL 2.76s cubic-bezier(.25,.6,.5,1) infinite 0ms"></div>
+          <div style="position:absolute;left:16px;bottom:8px;width:20px;height:20px;border-radius:50%;background:#ffd23f;box-shadow:inset 0 -3px 0 rgba(0,0,0,.3);--px:400px;--peak:-250px;animation:cashL 2.76s cubic-bezier(.25,.6,.5,1) infinite 120ms"></div>
+          <div style="position:absolute;left:16px;bottom:8px;width:34px;height:20px;background:#34d94b;border:2px solid #0d3d16;--px:230px;--peak:-330px;animation:cashL 2.76s cubic-bezier(.25,.6,.5,1) infinite 240ms"></div>
+          <div style="position:absolute;left:16px;bottom:8px;width:22px;height:22px;border-radius:50%;background:#b58a00;--px:480px;--peak:-200px;animation:cashL 2.76s cubic-bezier(.25,.6,.5,1) infinite 360ms"></div>
+          <div style="position:absolute;left:16px;bottom:8px;width:30px;height:18px;background:#e8dcc4;border:2px solid #8d8271;--px:350px;--peak:-290px;animation:cashL 2.76s cubic-bezier(.25,.6,.5,1) infinite 480ms"></div>
+          <div style="position:absolute;left:16px;bottom:8px;width:18px;height:18px;border-radius:50%;background:#ffe600;--px:540px;--peak:-160px;animation:cashL 2.76s cubic-bezier(.25,.6,.5,1) infinite 600ms"></div>
+
+          <!-- right cannon volley (mirrored via negative px) -->
+          <div style="position:absolute;right:16px;bottom:8px;width:26px;height:26px;border-radius:50%;background:#ffe600;box-shadow:inset 0 -4px 0 rgba(0,0,0,.3),0 0 16px rgba(255,230,0,.8);--px:-300px;--peak:-300px;animation:cashL 2.76s cubic-bezier(.25,.6,.5,1) infinite 690ms"></div>
+          <div style="position:absolute;right:16px;bottom:8px;width:20px;height:20px;border-radius:50%;background:#ffd23f;box-shadow:inset 0 -3px 0 rgba(0,0,0,.3);--px:-400px;--peak:-250px;animation:cashL 2.76s cubic-bezier(.25,.6,.5,1) infinite 810ms"></div>
+          <div style="position:absolute;right:16px;bottom:8px;width:34px;height:20px;background:#34d94b;border:2px solid #0d3d16;--px:-230px;--peak:-330px;animation:cashL 2.76s cubic-bezier(.25,.6,.5,1) infinite 930ms"></div>
+          <div style="position:absolute;right:16px;bottom:8px;width:22px;height:22px;border-radius:50%;background:#b58a00;--px:-480px;--peak:-200px;animation:cashL 2.76s cubic-bezier(.25,.6,.5,1) infinite 1050ms"></div>
+          <div style="position:absolute;right:16px;bottom:8px;width:30px;height:18px;background:#e8dcc4;border:2px solid #8d8271;--px:-350px;--peak:-290px;animation:cashL 2.76s cubic-bezier(.25,.6,.5,1) infinite 1170ms"></div>
+          <div style="position:absolute;right:16px;bottom:8px;width:18px;height:18px;border-radius:50%;background:#ffe600;--px:-540px;--peak:-160px;animation:cashL 2.76s cubic-bezier(.25,.6,.5,1) infinite 1290ms"></div>
+
+          <div style="position:absolute;left:20px;bottom:14px;font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271;z-index:5">L CANNON</div>
+          <div style="position:absolute;right:20px;bottom:14px;font-family:'Press Start 2P',monospace;font-size:9px;color:#8d8271;z-index:5">R CANNON</div>
+        </div>
+
+        <div style="display:flex;gap:22px;flex-wrap:wrap">
+          <div style="flex:1;min-width:420px;font-size:15px;line-height:1.8;color:#3d372f">
+            <strong>発射タイミング</strong>：フィーバー中のみ、<strong>4拍ごと（1.38s）</strong>に交互発射。左砲が拍1、右砲が拍3。等間隔なので音と揃い、リズムとして体に入る。<br>
+            <strong>1斉射 6〜8個</strong>を <strong>120ms 差</strong>で連続射出（マズルフラッシュ 90ms）。<br>
+            <strong>弾種</strong>：金貨（大・小）／銀貨／札束（緑）／紙幣（白）の5種をランダム。金貨は <code style="font-family:'Press Start 2P',monospace;font-size:10px">rotateZ 760°</code>、札は<strong>ひらひら</strong>させたいので rotateY を併用。<br>
+            <strong>軌道</strong>：放物線 <strong>2.76s</strong> <code style="font-family:'Press Start 2P',monospace;font-size:10px">cubic-bezier(.25,.6,.5,1)</code>、頂点は画面高の <strong>60〜85%</strong>、着地は画面外下。飛距離を個体ごとにばらす。
+          </div>
+          <div style="flex:1;min-width:420px;font-size:15px;line-height:1.8;color:#3d372f">
+            <strong>レイヤー</strong>：現金は<strong>盤面の手前・HUDの奥</strong>（z-index 中間）。ミノとゴーストの視認を絶対に妨げないよう、盤面に重なる区間だけ <strong>opacity .55</strong> に落とす。<br>
+            <strong>連動</strong>：コンボ段階で斉射数が増える（10+ で 8個、20+ で 10個＋紙吹雪追加）。クローバーフィーバー中は<strong>札束の比率を上げる</strong>。<br>
+            <strong>上限</strong>：同時表示 <strong>40個</strong>まで。超過分は生成せず、画面外に出た弾から即破棄。<br>
+            <strong>終了</strong>：フィーバー終了で新規発射停止、飛んでいる分は落ちきるまで再生。設定「パーティクル量」0%で完全OFF。
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- ===== 05 implementation notes ===== -->
   <div style="display:flex;flex-direction:column;gap:22px">
     <div style="display:flex;align-items:baseline;gap:16px;border-bottom:3px solid #c3b69c;padding-bottom:12px">
-      <span style="font-family:'Press Start 2P',monospace;font-size:22px;color:#c4116a">05</span>
+      <span style="font-family:'Press Start 2P',monospace;font-size:22px;color:#c4116a">06</span>
       <span style="font-family:'Bungee',sans-serif;font-size:28px">NOTES</span>
       <span style="font-size:17px;color:#8d8271">実装の前提</span>
     </div>

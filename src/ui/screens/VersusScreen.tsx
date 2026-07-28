@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BoardSnapshot, PlayerId } from '@net/protocol';
 import { Cabinet, useCabinetScale } from '../components/Cabinet';
+import { HypeLayer } from '../components/HypeLayer';
 import { RivalBoard } from '../components/RivalBoard';
 import { VersusResult } from '../components/VersusResult';
 import {
@@ -42,6 +43,7 @@ export function VersusScreen({ room, settings, seed, timePressure, onExit, onLea
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const shakeRef = useRef<HTMLDivElement>(null);
   const cabinetRef = useRef<HTMLDivElement>(null);
+  const cashRef = useRef<HTMLCanvasElement>(null);
   const scale = useCabinetScale();
 
   const [rivals, setRivals] = useState<Map<PlayerId, BoardSnapshot>>(new Map());
@@ -76,8 +78,8 @@ export function VersusScreen({ room, settings, seed, timePressure, onExit, onLea
     [seed, timePressure, showAttack, room.sendTopOut, room.sendBoard, room.drainIncoming],
   );
 
-  const { hud, paused, togglePause } = useGameEngine(
-    { canvasRef, shakeRef, cabinetRef },
+  const { hud, hype, paused, togglePause } = useGameEngine(
+    { canvasRef, shakeRef, cabinetRef, cashRef },
     scale,
     settings,
     multiplayer,
@@ -124,6 +126,7 @@ export function VersusScreen({ room, settings, seed, timePressure, onExit, onLea
         <div className="bezel">
           <div className="crt">
             <canvas ref={canvasRef} className="playfield" />
+            <HypeLayer events={hype} fever={fever} />
           </div>
         </div>
 
@@ -142,6 +145,9 @@ export function VersusScreen({ room, settings, seed, timePressure, onExit, onLea
           </div>
         )}
       </div>
+
+      {/* フィーバー現金砲。盤面の手前・HUDの奥に置く */}
+      <canvas ref={cashRef} className="cash-layer" aria-hidden="true" />
 
       <div className="plate plate-right versus-right">
         <ScorePanel hud={hud} />

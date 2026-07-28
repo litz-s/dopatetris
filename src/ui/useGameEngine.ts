@@ -21,11 +21,15 @@ import { getPendingGarbage, receiveGarbage } from '@core/game';
 import { BOARD_SYNC_INTERVAL_MS } from '@net/protocol';
 import type { BoardSnapshot } from '@net/protocol';
 import { encodeBoard } from '@net/snapshot';
+import { buildHypeEvents } from './hype';
+import type { HypeEvent } from './hype';
 import type { EventStack, GameState, GameStats, HeldMino, QueuedMino } from '@core/types';
 import { InputManager } from '@input/inputManager';
 import type { KeyLogEntry } from '@input/inputManager';
 import { audioEngine } from '@audio/audioEngine';
 import { playForEvents } from '@audio/gameSound';
+import { CashCannon } from '@render/cashCannon';
+import type { BoardRect } from '@render/cashCannon';
 import { GameRenderer } from '@render/gameRenderer';
 import { GRID } from '@render/theme';
 import type { QualityTier } from '@render/quality/qualityProfiles';
@@ -66,6 +70,8 @@ export type EngineRefs = {
   shakeRef: React.RefObject<HTMLDivElement | null>;
   /** マウス追従の基準となる筐体要素 */
   cabinetRef: React.RefObject<HTMLDivElement | null>;
+  /** フィーバー現金砲を描くレイヤー。盤面の手前・HUDの奥 */
+  cashRef?: React.RefObject<HTMLCanvasElement | null>;
 };
 
 /**
@@ -88,7 +94,7 @@ export type MultiplayerHooks = {
 };
 
 export function useGameEngine(
-  { canvasRef, shakeRef, cabinetRef }: EngineRefs,
+  { canvasRef, shakeRef, cabinetRef, cashRef }: EngineRefs,
   cabinetScale = 1,
   settings: Settings = DEFAULT_SETTINGS,
   multiplayer?: MultiplayerHooks,
@@ -108,6 +114,8 @@ export function useGameEngine(
 
   const [hud, setHud] = useState<HudSnapshot | null>(null);
   const [paused, setPaused] = useState(false);
+  /** T-SPIN / TETRIS / スコアポップの文字グラフィック */
+  const [hype, setHype] = useState<HypeEvent[]>([]);
 
   const restart = useCallback(() => {
     const multi = multiRef.current;
@@ -146,12 +154,29 @@ export function useGameEngine(
       renderer.quality.setReducedMotion(event.matches);
     motionQuery.addEventListener('change', onMotionChange);
 
-    /** 筐体の中での盤面の位置を求め、マウス列の算出に渡す */
+    // 現金砲は筐体全面を覆う別レイヤーに描く（盤面の手前・HUDの奥）
+    const cash = new CashCannon();
+
+    /** 筐体の中での盤面の位置を求める。マウス列の算出と、現金の重なり判定に使う */
+    let boardRect: BoardRect | null = null;
     const syncPlayfieldRect = (): void => {
       const cabinetRect = cabinet.getBoundingClientRect();
       const canvasRect = canvas.getBoundingClientRect();
       const scale = cabinetRect.width / cabinet.offsetWidth || 1;
-      input.setPlayfieldRect((canvasRect.left - cabinetRect.left) / scale, GRID.cellPitch);
+      const left = (canvasRect.left - cabinetRect.left) / scale;
+      const top = (canvasRect.top - cabinetRect.top) / scale;
+      input.setPlayfieldRect(left, GRID.cellPitch);
+      boardRect = {
+        x: left,
+        y: top,
+        width: canvasRect.width / scale,
+        height: canvasRect.height / scale,
+      };
+
+      const cashCanvas = cashRef?.current;
+      if (cashCanvas !== null && cashCanvas !== undefined) {
+        cash.resize(cashCanvas, cabinet.offsetWidth, cabinet.offsetHeight, scale);
+      }
     };
 
     const onResize = (): void => {
@@ -215,6 +240,15 @@ export function useGameEngine(
             renderer.handleEvents(result.events, result.state);
             playForEvents(audioEngine, result.events);
 
+            // 文字グラフィックを積む。期限切れは HUD 更新のたびに掃除する
+            const built = buildHypeEvents(
+              result.events,
+              now,
+              isFever(result.state) ? result.state.fever.comboRate : COMBO_RATE_BASE,
+              isFever(result.state),
+            );
+            if (built.length > 0) setHype((current) => [...current, ...built]);
+
             // 攻撃が確定したら相手へ送る。穴の位置は送信側が決めて相手へ伝える
             if (multiplayerHooks !== undefined) {
               for (const event of result.events) {
@@ -237,6 +271,21 @@ export function useGameEngine(
       // BGM の拍を描画へ渡し、背景の脈動とグリッド明滅を曲に同期させる
       renderer.setBeatPhase(audioEngine.getBeatPhase());
       renderer.render(current);
+
+      // フィーバー現金砲。終了しても飛んでいる弾は落ちきるまで描く
+      const cashCanvas = cashRef?.current;
+      if (cashCanvas !== null && cashCanvas !== undefined) {
+        const feverOn = isFever(current);
+        cash.setActive(feverOn && current.status === 'playing');
+        cash.update(
+          frameMs,
+          current.combo,
+          current.fever.cloverUntil > current.elapsedMs,
+          renderer.quality.getSettings().particleScale,
+        );
+        const cashCtx = cashCanvas.getContext('2d');
+        if (cashCtx !== null) cash.draw(cashCtx, boardRect);
+      }
 
       if (multiplayerHooks !== undefined) {
         // 着弾待ちのおじゃまを描画側へ伝える。切迫度は最も早く落ちてくるものを基準にする
@@ -267,6 +316,10 @@ export function useGameEngine(
       hudTimer += frameMs;
       if (hudTimer >= HUD_INTERVAL_MS) {
         hudTimer = 0;
+        // 表示し終えた文字グラフィックを片付ける
+        setHype((current) =>
+          current.length === 0 ? current : current.filter((e) => e.endsAt > now),
+        );
         setHud({
           score: current.score,
           level: current.level,
@@ -323,5 +376,5 @@ export function useGameEngine(
     renderer.resize(canvas, cabinetScale);
   }, [cabinetScale, canvasRef]);
 
-  return { hud, paused, restart, togglePause, renderer: rendererRef, input: inputRef };
+  return { hud, hype, paused, restart, togglePause, renderer: rendererRef, input: inputRef };
 }

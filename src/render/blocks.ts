@@ -62,6 +62,66 @@ export function drawBlock(
 }
 
 /**
+ * イベントタイルのスプライト置き場。
+ *
+ * glow は `shadowBlur` で描くが、これは毎フレーム実行すると非常に重い。
+ * 盤面に十数枚あるとフィーバー中（L3=44px）に 60fps を割ったため、
+ * 種別と発光段階の組み合わせごとに一度だけ焼いて、以後は転送するだけにする。
+ * 見た目は焼いた時点のものと同一で、呼吸パルスは転送時の拡縮と加算で表現する。
+ */
+const tileSpriteCache = new Map<string, HTMLCanvasElement>();
+
+/** スプライトの余白。glow がはみ出すぶんを確保する */
+function spritePadding(level: GlowLevel): number {
+  return Math.ceil(GLOW[level].blur);
+}
+
+function getEventTileSprite(
+  event: EventKind,
+  level: GlowLevel,
+  size: number,
+): HTMLCanvasElement | null {
+  const key = `${event}-${level}-${size}`;
+  const cached = tileSpriteCache.get(key);
+  if (cached !== undefined) return cached;
+
+  const pad = spritePadding(level);
+  const canvas = document.createElement('canvas');
+  canvas.width = size + pad * 2;
+  canvas.height = size + pad * 2;
+
+  const ctx = canvas.getContext('2d');
+  if (ctx === null) return null;
+
+  const color = EVENT_COLORS[event];
+  const glow = GLOW[level];
+  const bevel = Math.max(1, Math.round(size * BEVEL.ratio));
+
+  // 外側 glow
+  ctx.shadowColor = withAlpha(color, glow.alpha);
+  ctx.shadowBlur = glow.blur;
+  ctx.fillStyle = color;
+  ctx.fillRect(pad, pad, size, size);
+  ctx.shadowBlur = 0;
+
+  // ベベルは通常ミノと共通
+  ctx.fillStyle = `rgba(255, 255, 255, ${BEVEL.highlightAlpha})`;
+  ctx.fillRect(pad, pad, size, bevel);
+  ctx.fillStyle = `rgba(0, 0, 0, ${BEVEL.shadowAlpha})`;
+  ctx.fillRect(pad, pad + size - bevel, size, bevel);
+
+  // 記号
+  ctx.fillStyle = EVENT_SYMBOL_COLORS[event];
+  ctx.font = `${Math.round(size * 0.62)}px 'DotGothic16', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(EVENT_SYMBOLS[event], pad + size / 2, pad + size / 2 + size * 0.02);
+
+  tileSpriteCache.set(key, canvas);
+  return canvas;
+}
+
+/**
  * イベントタイルを描く。地色はミノ色を上書きし、記号は暗色で置く。
  * 通常ミノと違い、外側 glow を持つ。
  */
@@ -77,8 +137,9 @@ export function drawEventTile(
   options: Partial<BlockOptions> = {},
 ): void {
   const { alpha, brightness } = { ...DEFAULT_OPTIONS, ...options };
-  const color = EVENT_COLORS[event];
-  const glow = GLOW[glowLevel];
+
+  const sprite = getEventTileSprite(event, glowLevel, size);
+  if (sprite === null) return;
 
   // 待機時 0.9〜1.2s の呼吸パルス。scale 1 → 1.06、brightness 1 → 1.35
   const period = EVENT_PULSE_MS[event];
@@ -87,40 +148,24 @@ export function drawEventTile(
   const pulseScale = 1 + 0.06 * pulse;
   const pulseBrightness = 1 + 0.35 * pulse;
 
+  const pad = spritePadding(glowLevel);
   const center = size / 2;
+
   ctx.save();
   ctx.translate(x + center, y + center);
   ctx.scale(pulseScale, pulseScale);
-  ctx.translate(-center, -center);
-
   ctx.globalAlpha = alpha;
-  ctx.filter = `brightness(${brightness * pulseBrightness})`;
+  ctx.drawImage(sprite, -center - pad, -center - pad);
 
-  // 外側 glow
-  ctx.shadowColor = withAlpha(color, glow.alpha);
-  ctx.shadowBlur = glow.blur;
-  ctx.fillStyle = color;
-  ctx.fillRect(0, 0, size, size);
-  ctx.shadowBlur = 0;
-
-  // ベベルは通常ミノと共通
-  ctx.fillStyle = `rgba(255, 255, 255, ${BEVEL.highlightAlpha})`;
-  ctx.fillRect(0, 0, size, Math.max(1, Math.round(size * BEVEL.ratio)));
-  ctx.fillStyle = `rgba(0, 0, 0, ${BEVEL.shadowAlpha})`;
-  ctx.fillRect(
-    0,
-    size - Math.max(1, Math.round(size * BEVEL.ratio)),
-    size,
-    Math.max(1, Math.round(size * BEVEL.ratio)),
-  );
-
-  // 記号
-  ctx.filter = 'none';
-  ctx.fillStyle = EVENT_SYMBOL_COLORS[event];
-  ctx.font = `${Math.round(size * 0.62)}px 'DotGothic16', sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(EVENT_SYMBOLS[event], center, center + size * 0.02);
+  // 明るさは焼き込めないので、白を加算して脈動を表現する
+  const lift = (brightness * pulseBrightness - 1) * 0.42;
+  if (lift > 0.001) {
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = alpha * Math.min(0.6, lift);
+    ctx.fillStyle = EVENT_COLORS[event];
+    ctx.fillRect(-center, -center, size, size);
+    ctx.globalCompositeOperation = 'source-over';
+  }
 
   ctx.globalAlpha = 1;
   ctx.restore();

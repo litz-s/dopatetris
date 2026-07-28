@@ -61,6 +61,29 @@ export const LINE_CLEAR_DROP_MS = 230;
 export const LINE_CLEAR_DELAY_MS = LINE_CLEAR_POP_MS + LINE_CLEAR_DROP_MS;
 
 /**
+ * 4列消しは左からのポップとは別演出になる（デザイン仕様 05-I）。
+ * チャージ → 白い横スイープ → 圧縮消滅 → ひと呼吸置いてから段落下。
+ * 「タメを作る」ための 60ms が入るぶん、通常の消去より長い。
+ */
+export const TETRIS_CHARGE_MS = 240;
+export const TETRIS_WIPE_MS = 200;
+export const TETRIS_COMPRESS_MS = 140;
+export const TETRIS_HOLD_MS = 60;
+export const TETRIS_CLEAR_POP_MS =
+  TETRIS_CHARGE_MS + TETRIS_WIPE_MS + TETRIS_COMPRESS_MS + TETRIS_HOLD_MS;
+export const TETRIS_CLEAR_DELAY_MS = TETRIS_CLEAR_POP_MS + LINE_CLEAR_DROP_MS;
+
+/** 消した行数に応じた消去演出の停止時間 */
+export function getClearDelayMs(rowCount: number): number {
+  return rowCount >= 4 ? TETRIS_CLEAR_DELAY_MS : LINE_CLEAR_DELAY_MS;
+}
+
+/** 段落下が始まるまでの時間（演出の種類で変わる） */
+export function getClearPopMs(rowCount: number): number {
+  return rowCount >= 4 ? TETRIS_CLEAR_POP_MS : LINE_CLEAR_POP_MS;
+}
+
+/**
  * 重力（ハート3）の落下演出中の停止時間。
  * デザイン仕様 04-D: 列ごとに左→右へ32msずらし、1ブロック270msで落ちる。
  */

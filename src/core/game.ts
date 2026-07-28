@@ -34,7 +34,7 @@ import {
   HARD_DROP_POINT,
   HOLD_CAPACITY,
   LINES_PER_LEVEL,
-  LINE_CLEAR_DELAY_MS,
+  getClearDelayMs,
   LOCK_DELAY_MS,
   MAX_DROP_CELLS_PER_STEP,
   MAX_LOCK_RESETS,
@@ -915,9 +915,11 @@ export function step(
 
   // ライン消去演出中は入力も落下も受け付けない
   if (next.clearing !== null) {
+    const rows = next.clearing.rows;
     const elapsedMs = next.clearing.elapsedMs + deltaMs;
-    next = { ...next, clearing: { rows: next.clearing.rows, elapsedMs } };
-    if (elapsedMs >= LINE_CLEAR_DELAY_MS) next = finishClearing(next, sink);
+    next = { ...next, clearing: { rows, elapsedMs } };
+    // 4列消しは専用演出のぶん停止が長い
+    if (elapsedMs >= getClearDelayMs(rows.length)) next = finishClearing(next, sink);
     return { state: next, events: sink.drain() };
   }
 

@@ -11,6 +11,7 @@ import type { EventKind, GameStats } from '@core/types';
 import { formatKey } from '@input/keybinds';
 import { Cabinet, useCabinetScale } from './components/Cabinet';
 import { EventIcon } from './components/EventIcon';
+import { HypeLayer } from './components/HypeLayer';
 import { MinoPreview } from './components/MinoPreview';
 import { useGameEngine } from './useGameEngine';
 import type { HudSnapshot } from './useGameEngine';
@@ -63,11 +64,12 @@ export function GameScreen({ settings, onFinish, onExit }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const shakeRef = useRef<HTMLDivElement>(null);
   const cabinetRef = useRef<HTMLDivElement>(null);
+  const cashRef = useRef<HTMLCanvasElement>(null);
   const scale = useCabinetScale();
   const finishedRef = useRef(false);
 
-  const { hud, paused, restart, togglePause } = useGameEngine(
-    { canvasRef, shakeRef, cabinetRef },
+  const { hud, hype, paused, restart, togglePause } = useGameEngine(
+    { canvasRef, shakeRef, cabinetRef, cashRef },
     scale,
     settings,
   );
@@ -95,9 +97,13 @@ export function GameScreen({ settings, onFinish, onExit }: Props) {
         <div className="bezel">
           <div className="crt">
             <canvas ref={canvasRef} className="playfield" />
+            <HypeLayer events={hype} fever={fever} />
           </div>
         </div>
       </div>
+
+      {/* フィーバー現金砲。盤面の手前・HUDの奥に置く */}
+      <canvas ref={cashRef} className="cash-layer" aria-hidden="true" />
 
       <div className="plate plate-right">
         <NextPanel hud={hud} />

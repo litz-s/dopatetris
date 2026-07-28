@@ -21,8 +21,17 @@ export type Particle = {
   drag: number;
   rotation: number;
   spin: number;
-  /** 'square' は四角、'spark' は伸びる線 */
-  shape: 'square' | 'spark';
+  /**
+   * 'square' は四角、'spark' は伸びる線、
+   * 'coin' は rotateY する円盤、'glyph' は記号（♥ / ✦ など）。
+   */
+  shape: 'square' | 'spark' | 'coin' | 'glyph';
+  /** shape が 'glyph' のときに描く文字 */
+  glyph: string;
+  /** 横方向の揺れ幅。ハートの蛇行に使う */
+  waver: number;
+  /** 揺れの位相 */
+  waverPhase: number;
 };
 
 const MAX_CAPACITY = 3000;
@@ -50,6 +59,9 @@ export class ParticlePool {
         rotation: 0,
         spin: 0,
         shape: 'square',
+        glyph: '',
+        waver: 0,
+        waverPhase: 0,
       });
     }
   }
@@ -74,6 +86,16 @@ export class ParticlePool {
       if (particle !== undefined && !particle.alive) {
         particle.alive = true;
         this.aliveCount += 1;
+        // 前回の使い回しで残る値をここで戻しておく。
+        // 呼び出し側が毎回すべて指定するとは限らないため。
+        particle.shape = 'square';
+        particle.glyph = '';
+        particle.waver = 0;
+        particle.waverPhase = 0;
+        particle.rotation = 0;
+        particle.spin = 0;
+        particle.gravity = 0;
+        particle.drag = 1;
         return particle;
       }
     }
@@ -102,6 +124,12 @@ export class ParticlePool {
       p.x += p.vx * deltaMs;
       p.y += p.vy * deltaMs;
       p.rotation += p.spin * deltaMs;
+
+      // 横に軽く蛇行させる（ハートのふわり感）
+      if (p.waver !== 0) {
+        p.waverPhase += deltaMs * 0.006;
+        p.x += Math.cos(p.waverPhase) * p.waver * deltaMs * 0.01;
+      }
     }
   }
 
@@ -115,7 +143,22 @@ export class ParticlePool {
       ctx.globalAlpha = t < 0.3 ? t / 0.3 : 1;
       ctx.fillStyle = p.color;
 
-      if (p.shape === 'spark') {
+      if (p.shape === 'coin') {
+        // rotateY を横幅の伸縮で表現する。真横を向いた瞬間に細くなる
+        const width = Math.max(1, Math.abs(Math.cos(p.rotation)) * p.size);
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y, width / 2, p.size / 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (p.shape === 'glyph') {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation);
+        ctx.font = `${Math.round(p.size)}px 'DotGothic16', sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(p.glyph, 0, 0);
+        ctx.restore();
+      } else if (p.shape === 'spark') {
         const length = p.size * (1 + Math.min(4, Math.hypot(p.vx, p.vy) * 8));
         ctx.save();
         ctx.translate(p.x, p.y);

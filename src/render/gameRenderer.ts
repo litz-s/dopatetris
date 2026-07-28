@@ -16,13 +16,13 @@ import {
   BOARD_WIDTH,
   LINE_CLEAR_CELL_MS,
   LINE_CLEAR_COLUMN_DELAY_MS,
-  LINE_CLEAR_POP_MS,
+  getClearPopMs,
   LINE_CLEAR_DROP_MS,
   GRAVITY_BLOCK_MS,
   GRAVITY_COLUMN_DELAY_MS,
 } from '@core/config/balance';
 import type { GameEvent } from '@core/events';
-import type { Cell, GameState, MinoType, Rotation } from '@core/types';
+import type { Cell, EventKind, GameState, MinoType, Rotation } from '@core/types';
 import { easeOutBack, clamp01 } from './anim/spring';
 import { drawBlock, drawClearingBlock, drawEventTile, drawGhostBlock } from './blocks';
 import { ParticlePool } from './particles/pool';
@@ -34,6 +34,16 @@ import {
   EASING,
   GRAVITY,
   HARD_DROP,
+  TETRIS_FX,
+  TETRIS_PILLAR_COLOR,
+  TETRIS_RING_COLOR,
+  TSPIN,
+  TSPIN_FLASH_COLOR,
+  TSPIN_TIER_COLORS,
+  EVENT_VFX,
+  EVENT_VFX_THIN_FROM,
+  EVENT_VFX_THIN_RATIO,
+  cubicBezierInverse,
   SHAKE,
   SHAKE_DECAY,
   cubicBezier,
@@ -56,6 +66,17 @@ const SPEED_LINES_MS = 40;
 
 /** おじゃま着弾の突き上げ演出の長さ */
 const GARBAGE_IMPACT_MS = 260;
+
+/**
+ * 白い横スイープが各列を通過する時刻（チャージ完了からの経過ミリ秒）。
+ * 圧縮の開始を「スイープ通過後」に正確に揃えるため、
+ * イージングを逆算して一度だけ表にしておく。
+ */
+const TETRIS_WIPE_PASS_MS: readonly number[] = Array.from({ length: BOARD_WIDTH }, (_, x) => {
+  // front はセル中心を基準に -0.5 から W+0.5 まで動く
+  const target = (x + 1) / (BOARD_WIDTH + 1);
+  return cubicBezierInverse(EASING.tetWipe, target) * TETRIS_FX.wipeMs;
+});
 
 /**
  * フィーバー中に巡回させる色。1/2拍ごとに切り替えてディスコの照明を作る。
@@ -87,6 +108,48 @@ type Squash = {
   maxLife: number;
   /** ハードドロップなら強く潰す */
   strong: boolean;
+  /**
+   * 潰しの深さ。指定すると単純な scale へ切り替わる。
+   * T-Spin の「一瞬 .90 に潰れる」用。
+   */
+  depth?: number;
+};
+
+/**
+ * T-Spin の演出。はまった穴の形に沿って白枠を収縮させる。
+ * 対象セルは固定されたミノそのものなので、pieceLocked から受け取る。
+ */
+type TSpinFx = {
+  cells: readonly (readonly [number, number])[];
+  elapsedMs: number;
+  /** 0=SINGLE(シアン) 1=DOUBLE(マゼンタ) 2=TRIPLE(ゴールド) */
+  tier: number;
+};
+
+/**
+ * イベントタイルVFXの予約。
+ * ポップ消去がそのセルに到達したフレームで発火させるため、
+ * 消去が始まった時点で「いつ・どこで・何を」出すかを積んでおく。
+ */
+type ScheduledEventVfx = {
+  at: number;
+  kind: EventKind;
+  cellX: number;
+  cellY: number;
+  /** 同一消去内での通し番号。3個目以降はVFXを間引く */
+  index: number;
+};
+
+/** リング・オーラ・光柱・水平線など、粒子ではない重ね描き */
+type Overlay = {
+  shape: 'ring' | 'beam' | 'hline';
+  x: number;
+  y: number;
+  life: number;
+  maxLife: number;
+  color: string;
+  /** ring の最終倍率、beam/hline の長さ */
+  scale: number;
 };
 
 /** ハードドロップの残像 */
@@ -126,6 +189,13 @@ export class GameRenderer {
   /** 直近にミノを置いた位置。演出の発生位置が特定できないときの拠り所 */
   private lastLockRow = BOARD_HEIGHT - 1;
   private lastLockColumn = BOARD_WIDTH / 2;
+
+  /** T-Spin が決まった瞬間の演出 */
+  private tspin: TSpinFx | null = null;
+  /** イベントタイルVFXの発火予約 */
+  private readonly eventVfxQueue: ScheduledEventVfx[] = [];
+  /** リングや光柱などの重ね描き */
+  private readonly overlays: Overlay[] = [];
 
   /** 着弾を待っているおじゃまの行数 */
   private pendingGarbage = 0;
@@ -211,14 +281,40 @@ export class GameRenderer {
     // スタック取得の演出位置を決めるため、このバッチで消えた行を先に拾っておく。
     // stackGained は linesCleared より先に飛んでくるので、後追いでは間に合わない。
     let clearedRows: readonly number[] | null = null;
+    let lockedCells: readonly (readonly [number, number])[] | null = null;
+
     for (const event of events) {
-      if (event.kind === 'linesCleared') {
-        clearedRows = event.rows;
-        break;
-      }
       if (event.kind === 'pieceLocked') {
         this.lastLockRow = event.y + 1;
         this.lastLockColumn = event.x + 1.5;
+        lockedCells = getShape(event.type, event.rot).map(
+          ([dx, dy]) => [event.x + dx, event.y + dy] as const,
+        );
+      }
+      if (event.kind === 'linesCleared') {
+        clearedRows = event.rows;
+        // T-Spin は「はまった穴の形」に沿って枠を出すため、
+        // 直前に固定されたミノのセルをそのまま使う
+        if (event.clearType.startsWith('tspin') && lockedCells !== null) {
+          this.tspin = {
+            cells: lockedCells,
+            elapsedMs: 0,
+            tier: tspinTier(event.clearType),
+          };
+          this.punch(10, 160, 0, profile.shakeScale);
+          this.emitTSpinShards(lockedCells, tier);
+
+          // T-Spin の着地は「一瞬 scale .90 に潰れる」だけ。
+          // ハードドロップ用の長いスカッシュに上書きされないよう差し替える。
+          this.squash = {
+            cells: lockedCells,
+            life: TSPIN.squashMs,
+            maxLife: TSPIN.squashMs,
+            strong: false,
+            depth: TSPIN.squashScale,
+          };
+        }
+        this.scheduleEventVfx(event.rows, state);
       }
     }
 
@@ -393,6 +489,26 @@ export class GameRenderer {
     if (this.speedLinesMs > 0) this.speedLinesMs -= deltaMs;
     if (this.garbageImpactMs > 0) this.garbageImpactMs -= deltaMs;
 
+    if (this.tspin !== null) {
+      this.tspin.elapsedMs += deltaMs;
+      if (this.tspin.elapsedMs > TSPIN.outlineMs + TSPIN.outlineFadeMs) this.tspin = null;
+    }
+
+    // 発火時刻を過ぎたイベントVFXを出す
+    while (this.eventVfxQueue.length > 0) {
+      const head = this.eventVfxQueue[0];
+      if (head === undefined || head.at > this.elapsedMs) break;
+      this.eventVfxQueue.shift();
+      this.fireEventVfx(head);
+    }
+
+    for (let i = this.overlays.length - 1; i >= 0; i--) {
+      const overlay = this.overlays[i];
+      if (overlay === undefined) continue;
+      overlay.life -= deltaMs;
+      if (overlay.life <= 0) this.overlays.splice(i, 1);
+    }
+
     this.updateShake(deltaMs);
   }
 
@@ -447,12 +563,15 @@ export class GameRenderer {
     this.drawScanlines(ctx);
     this.drawScanSweep(ctx);
     this.drawStack(ctx, state);
+    this.drawTetrisOverlay(ctx, state);
+    this.drawTSpin(ctx);
     this.drawFeverGlow(ctx, state);
     this.drawGravity(ctx, state);
     this.drawSquash(ctx, state);
     this.drawTrails(ctx);
     this.drawGhost(ctx, state);
     this.drawActive(ctx, state);
+    this.drawOverlays(ctx);
     this.pool.draw(ctx);
     this.drawShockwaves(ctx);
     this.drawGarbageWarning(ctx);
@@ -569,10 +688,14 @@ export class GameRenderer {
     // 重力で落下中のセルも通常描画から外し、補間位置に描く
     const fallingKeys = this.getFallingKeys(state);
 
+    // 4列消しは左からのポップではなく専用演出になる（デザイン仕様 05-I）
+    const isTetris = clearing !== null && clearing.rows.length >= 4;
+    const popMs = clearing !== null ? getClearPopMs(clearing.rows.length) : 0;
+
     // 段落下のオフセット
     let dropEase = 0;
-    if (clearing !== null && clearing.elapsedMs > LINE_CLEAR_POP_MS) {
-      const t = clamp01((clearing.elapsedMs - LINE_CLEAR_POP_MS) / LINE_CLEAR_DROP_MS);
+    if (clearing !== null && clearing.elapsedMs > popMs) {
+      const t = clamp01((clearing.elapsedMs - popMs) / LINE_CLEAR_DROP_MS);
       dropEase = easeOutBack(t);
     }
 
@@ -599,7 +722,15 @@ export class GameRenderer {
         const color = cell.event !== null ? EVENT_COLORS[cell.event] : MINO_COLORS[cell.color];
 
         if (isClearing && clearing !== null) {
-          // 列ごとに 45ms ずらして 210ms でポップさせる
+          if (isTetris) {
+            // 4列消し: チャージ→白飛び→圧縮。行の並び順（下から）で遅延をずらす
+            const rowIndex = clearing.rows.indexOf(y);
+            const fromBottom = clearing.rows.length - 1 - rowIndex;
+            this.drawTetrisCell(ctx, px, py, cell, clearing.elapsedMs, fromBottom, x);
+            continue;
+          }
+
+          // 通常消去: 列ごとにずらして 210ms でポップさせる
           const start = x * LINE_CLEAR_COLUMN_DELAY_MS;
           const progress = (clearing.elapsedMs - start) / LINE_CLEAR_CELL_MS;
           if (progress < 0) {
@@ -613,6 +744,509 @@ export class GameRenderer {
 
         this.drawCell(ctx, px, py, cell, 'L1');
       }
+    }
+  }
+
+  /**
+   * 4列消しの1セル。デザイン仕様 05-I の3段階を再現する。
+   *   ①チャージ: 下の行から 55ms 差で白飛びしながら縦に膨らむ
+   *   ②スイープ: 白い横線が通過する
+   *   ③圧縮: 通過した列から scaleY 0.24 → 0 へ潰れて消える
+   */
+  private drawTetrisCell(
+    ctx: CanvasRenderingContext2D,
+    px: number,
+    py: number,
+    cell: NonNullable<Cell>,
+    elapsedMs: number,
+    fromBottom: number,
+    column: number,
+  ): void {
+    const chargeStart = fromBottom * TETRIS_FX.rowStaggerMs;
+    const chargeT = clamp01((elapsedMs - chargeStart) / TETRIS_FX.chargeMs);
+
+    // 圧縮はスイープがこの列を通過してから始まる
+    const compressStart = TETRIS_FX.chargeMs + (TETRIS_WIPE_PASS_MS[column] ?? 0);
+    const compressT = clamp01((elapsedMs - compressStart) / TETRIS_FX.compressMs);
+    if (compressT >= 1) return;
+
+    // 彩度を落としながら白飛びさせる
+    const brightness = 1 + (TETRIS_FX.chargeBrightness - 1) * chargeT;
+    const saturate = 1 - chargeT;
+
+    // 膨らみ → 圧縮
+    const scaleY =
+      compressT > 0
+        ? TETRIS_FX.compressFromScaleY * (1 - compressT)
+        : 1 + (TETRIS_FX.chargeScaleY - 1) * chargeT;
+
+    const color = cell.event !== null ? EVENT_COLORS[cell.event] : MINO_COLORS[cell.color];
+    const centerY = py + GRID.cellBody / 2;
+
+    ctx.save();
+    ctx.translate(px, centerY);
+    ctx.scale(1, scaleY);
+    ctx.translate(-px, -centerY);
+    ctx.filter = `brightness(${brightness.toFixed(2)}) saturate(${saturate.toFixed(2)})`;
+    drawBlock(ctx, px, py, GRID.cellBody, color);
+    ctx.filter = 'none';
+    ctx.restore();
+  }
+
+  /**
+   * T-Spin。はまった穴の形に沿った白枠が scale 1.75 → 1.00 でカチッと収縮し、
+   * 線幅を 6 → 2px へ絞ってからフェードする。同フレームで紫のフラッシュを重ねる。
+   */
+  private drawTSpin(ctx: CanvasRenderingContext2D): void {
+    const fx = this.tspin;
+    if (fx === null) return;
+
+    const flash = this.quality.getProfile().flashScale;
+    const elapsed = fx.elapsedMs;
+
+    // 紫フラッシュ
+    if (elapsed < TSPIN.flashMs) {
+      const t = 1 - elapsed / TSPIN.flashMs;
+      ctx.fillStyle = withAlpha(TSPIN_FLASH_COLOR, 0.5 * t * flash);
+      ctx.fillRect(0, 0, BOARD_PX_WIDTH, BOARD_PX_HEIGHT);
+    }
+
+    // 収縮 → フェード
+    const shrinkT = clamp01(elapsed / TSPIN.outlineMs);
+    const scale =
+      TSPIN.outlineFromScale +
+      (TSPIN.outlineToScale - TSPIN.outlineFromScale) * cubicBezier(EASING.slam, shrinkT);
+    const width =
+      TSPIN.outlineFromWidth + (TSPIN.outlineToWidth - TSPIN.outlineFromWidth) * shrinkT;
+
+    const fadeT = clamp01((elapsed - TSPIN.outlineMs) / TSPIN.outlineFadeMs);
+    const alpha = (1 - fadeT) * flash;
+    if (alpha <= 0) return;
+
+    // セル群の中心を原点にして拡大縮小する
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (const [x, y] of fx.cells) {
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+    }
+    const centerX = ((minX + maxX + 1) / 2) * GRID.cellPitch;
+    const centerY = ((minY + maxY + 1) / 2 - BOARD_BUFFER_HEIGHT) * GRID.cellPitch;
+
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.scale(scale, scale);
+    ctx.translate(-centerX, -centerY);
+
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = Math.max(1, width);
+    ctx.shadowColor = TSPIN_TIER_COLORS[fx.tier] ?? TSPIN_TIER_COLORS[0];
+    ctx.shadowBlur = 18;
+
+    for (const [x, y] of fx.cells) {
+      if (y < BOARD_BUFFER_HEIGHT) continue;
+      ctx.strokeRect(
+        x * GRID.cellPitch,
+        (y - BOARD_BUFFER_HEIGHT) * GRID.cellPitch,
+        GRID.cellBody,
+        GRID.cellBody,
+      );
+    }
+
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  /**
+   * 消える行に含まれるイベントタイルを拾い、
+   * ポップ（4列消しならスイープ）がそのセルに到達する時刻で予約する。
+   */
+  private scheduleEventVfx(rows: readonly number[], state: GameState): void {
+    const isTetris = rows.length >= 4;
+    const found: { column: number; at: number; kind: EventKind; row: number }[] = [];
+
+    // 左から右の順に拾う。同一ラインの連発順を仕様どおりにするため
+    for (let x = 0; x < BOARD_WIDTH; x++) {
+      for (const y of [...rows].sort((a, b) => a - b)) {
+        const cell = state.board[y]?.[x];
+        if (cell == null || cell.event === null) continue;
+        const offset = isTetris
+          ? TETRIS_FX.chargeMs + (TETRIS_WIPE_PASS_MS[x] ?? 0)
+          : x * LINE_CLEAR_COLUMN_DELAY_MS;
+        found.push({ column: x, at: this.elapsedMs + offset, kind: cell.event, row: y });
+      }
+    }
+
+    found.forEach((entry, index) => {
+      this.eventVfxQueue.push({
+        at: entry.at,
+        kind: entry.kind,
+        cellX: entry.column,
+        cellY: entry.row,
+        index,
+      });
+    });
+    this.eventVfxQueue.sort((a, b) => a.at - b.at);
+  }
+
+  /** 予約されたイベントVFXを実際に出す */
+  private fireEventVfx(entry: ScheduledEventVfx): void {
+    const profile = this.quality.getProfile();
+    if (profile.particleLimit === 0) return;
+
+    // 3個目以降は数を半分に間引く（音程だけ上げる方針）
+    const thin = entry.index >= EVENT_VFX_THIN_FROM ? EVENT_VFX_THIN_RATIO : 1;
+
+    const x = entry.cellX * GRID.cellPitch + GRID.cellBody / 2;
+    const y = (entry.cellY - BOARD_BUFFER_HEIGHT) * GRID.cellPitch + GRID.cellBody / 2;
+
+    switch (entry.kind) {
+      case 'bomb':
+        this.emitBombVfx(x, y, thin, profile.shakeScale, profile.flashScale);
+        break;
+      case 'heart':
+        this.emitHeartVfx(x, y, thin);
+        break;
+      case 'coin':
+        this.emitCoinVfx(x, y, thin);
+        break;
+      case 'clover':
+        this.emitCloverVfx(x, y, thin);
+        break;
+    }
+  }
+
+  /** 爆弾: 二重の衝撃リング＋放物線の破片＋短い赤フラッシュ */
+  private emitBombVfx(
+    x: number,
+    y: number,
+    thin: number,
+    shakeScale: number,
+    flashScale: number,
+  ): void {
+    const spec = EVENT_VFX.bomb;
+
+    this.overlays.push({
+      shape: 'ring',
+      x,
+      y,
+      life: spec.waveMs,
+      maxLife: spec.waveMs,
+      color: NEON.magenta,
+      scale: spec.waveToScale,
+    });
+    // 2本目は 80ms 遅らせてイエローで重ねる
+    this.overlays.push({
+      shape: 'ring',
+      x,
+      y,
+      life: spec.waveMs + spec.waveDelayMs,
+      maxLife: spec.waveMs,
+      color: NEON.yellow,
+      scale: spec.waveToScale,
+    });
+
+    this.flashes.push({
+      life: spec.flashMs,
+      maxLife: spec.flashMs,
+      peak: 0.4 * flashScale,
+      originX: x / BOARD_PX_WIDTH,
+      color: '#ff2f2f',
+    });
+    this.punch(spec.shakePx, 180, 0, shakeScale);
+
+    const count = Math.max(2, Math.round(spec.debris * thin));
+    for (let i = 0; i < count; i++) {
+      const p = this.pool.acquire();
+      if (p === null) return;
+      const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
+      const velocity = 0.16 + Math.random() * 0.3;
+      p.x = x;
+      p.y = y;
+      p.vx = Math.cos(angle) * velocity;
+      p.vy = Math.sin(angle) * velocity - 0.12;
+      p.maxLife = spec.debrisMs;
+      p.life = p.maxLife;
+      p.size = GRID.cellBody * 0.16;
+      p.color = i % 2 === 0 ? NEON.yellow : NEON.magenta;
+      p.gravity = 0.0016;
+      p.drag = 0.998;
+      p.spin = 0.011;
+      p.shape = 'square';
+    }
+  }
+
+  /** ハート: 柔らかいオーラとふわりと昇るハート。爆発感を出さない */
+  private emitHeartVfx(x: number, y: number, thin: number): void {
+    const spec = EVENT_VFX.heart;
+
+    this.overlays.push({
+      shape: 'ring',
+      x,
+      y,
+      life: spec.auraMs,
+      maxLife: spec.auraMs,
+      color: EVENT_COLORS.heart,
+      scale: spec.auraToScale,
+    });
+
+    const base = spec.countMin + Math.floor(Math.random() * (spec.countMax - spec.countMin + 1));
+    const count = Math.max(2, Math.round(base * thin));
+
+    for (let i = 0; i < count; i++) {
+      const p = this.pool.acquire();
+      if (p === null) return;
+      p.x = x + (Math.random() - 0.5) * GRID.cellBody;
+      p.y = y;
+      p.vx = 0;
+      p.vy = -0.13;
+      // 90ms 差で順に立ち上がるよう、寿命に下駄を履かせる
+      p.maxLife = spec.floatMs;
+      p.life = p.maxLife + i * spec.staggerMs;
+      p.size = GRID.cellBody * 0.55;
+      p.color = EVENT_COLORS.heart;
+      p.gravity = -0.00002;
+      p.drag = 1;
+      p.shape = 'glyph';
+      p.glyph = '♥';
+      p.waver = spec.waverPx;
+      p.waverPhase = Math.random() * Math.PI * 2;
+    }
+  }
+
+  /** コイン: rotateY する金貨が左右に散り、金の水平ラインが残る */
+  private emitCoinVfx(x: number, y: number, thin: number): void {
+    const spec = EVENT_VFX.coin;
+
+    this.overlays.push({
+      shape: 'hline',
+      x,
+      y,
+      life: spec.lineMs,
+      maxLife: spec.lineMs,
+      color: NEON.yellow,
+      scale: BOARD_PX_WIDTH,
+    });
+
+    const base = spec.countMin + Math.floor(Math.random() * (spec.countMax - spec.countMin + 1));
+    const count = Math.max(2, Math.round(base * thin));
+
+    for (let i = 0; i < count; i++) {
+      const p = this.pool.acquire();
+      if (p === null) return;
+      // 左右に散らす
+      const dir = i % 2 === 0 ? -1 : 1;
+      p.x = x;
+      p.y = y;
+      p.vx = dir * (0.06 + Math.random() * 0.12);
+      p.vy = -(0.12 + Math.random() * 0.1);
+      p.maxLife = spec.spinMs;
+      p.life = p.maxLife;
+      p.size = GRID.cellBody * 0.5;
+      p.color = i % 3 === 0 ? '#ffd400' : NEON.yellow;
+      p.gravity = 0.0012;
+      p.drag = 0.999;
+      // rotateY 1080° 相当を寿命いっぱいで回しきる
+      p.spin = (Math.PI * 2 * spec.spinTurns) / spec.spinMs;
+      p.shape = 'coin';
+    }
+  }
+
+  /** クローバー: 緑の光柱と、螺旋を描いて外へ飛ぶ星 */
+  private emitCloverVfx(x: number, y: number, thin: number): void {
+    const spec = EVENT_VFX.clover;
+
+    this.overlays.push({
+      shape: 'beam',
+      x,
+      y,
+      life: spec.beamMs,
+      maxLife: spec.beamMs,
+      color: EVENT_COLORS.clover,
+      scale: y,
+    });
+
+    const count = Math.max(2, Math.round(spec.count * thin));
+    for (let i = 0; i < count; i++) {
+      const p = this.pool.acquire();
+      if (p === null) return;
+      const angle = (Math.PI * 2 * i) / count;
+      // 螺旋に見えるよう、接線方向の速度を与えて回転もかける
+      const velocity = 0.1 + Math.random() * 0.06;
+      p.x = x;
+      p.y = y;
+      p.vx = Math.cos(angle) * velocity;
+      p.vy = Math.sin(angle) * velocity - 0.04;
+      p.maxLife = spec.swirlMs;
+      p.life = p.maxLife + i * spec.staggerMs;
+      p.size = GRID.cellBody * 0.5;
+      p.color = EVENT_COLORS.clover;
+      p.gravity = 0.0002;
+      p.drag = 0.9992;
+      p.spin = (Math.PI * 2 * spec.swirlTurns) / spec.swirlMs;
+      p.shape = 'glyph';
+      p.glyph = '✦';
+    }
+  }
+
+  /** リング・光柱・水平線をまとめて描く */
+  private drawOverlays(ctx: CanvasRenderingContext2D): void {
+    if (this.overlays.length === 0) return;
+    const flash = this.quality.getProfile().flashScale;
+
+    ctx.save();
+    for (const overlay of this.overlays) {
+      // maxLife を超える life は「発火待ち」なので、まだ描かない
+      if (overlay.life > overlay.maxLife) continue;
+      const t = 1 - overlay.life / overlay.maxLife;
+      const alpha = (1 - t) * flash;
+      if (alpha <= 0) continue;
+
+      if (overlay.shape === 'ring') {
+        const radius = GRID.cellBody * 0.5 * (0.1 + overlay.scale * t);
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = overlay.color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(overlay.x, overlay.y, radius, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (overlay.shape === 'beam') {
+        // 真上に立ち上がる光の柱
+        const height = overlay.scale * Math.min(1, t * 2);
+        const gradient = ctx.createLinearGradient(overlay.x, overlay.y, overlay.x, overlay.y - height);
+        gradient.addColorStop(0, withAlpha(overlay.color, alpha * 0.9));
+        gradient.addColorStop(1, withAlpha(overlay.color, 0));
+        ctx.fillStyle = gradient;
+        ctx.fillRect(overlay.x - GRID.cellBody * 0.4, overlay.y - height, GRID.cellBody * 0.8, height);
+      } else {
+        // 落下が緩む合図の水平線
+        const width = overlay.scale * Math.min(1, t * 3);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = overlay.color;
+        ctx.fillRect(overlay.x - width / 2, overlay.y - 1, width, 2);
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  /** T-Spin の破片。6〜10片を全方位へ飛ばす */
+  private emitTSpinShards(
+    cells: readonly (readonly [number, number])[],
+    tier: ReturnType<QualityManager['getTier']>,
+  ): void {
+    if (this.quality.getProfile().particleLimit === 0) return;
+
+    const scale = getEffectScale('lockSplash', tier);
+    if (scale.count === 0) return;
+
+    let sumX = 0;
+    let sumY = 0;
+    for (const [x, y] of cells) {
+      sumX += x;
+      sumY += y;
+    }
+    const cx = (sumX / cells.length + 0.5) * GRID.cellPitch;
+    const cy = (sumY / cells.length + 0.5 - BOARD_BUFFER_HEIGHT) * GRID.cellPitch;
+
+    const count =
+      TSPIN.shardMin + Math.floor(Math.random() * (TSPIN.shardMax - TSPIN.shardMin + 1));
+
+    for (let i = 0; i < count; i++) {
+      const p = this.pool.acquire();
+      if (p === null) return;
+      const angle = (Math.PI * 2 * i) / count + Math.random() * 0.3;
+      const velocity = 0.2 + Math.random() * 0.3;
+      p.x = cx;
+      p.y = cy;
+      p.vx = Math.cos(angle) * velocity;
+      p.vy = Math.sin(angle) * velocity;
+      p.maxLife = TSPIN.shardMs * scale.life;
+      p.life = p.maxLife;
+      p.size = GRID.cellBody * (0.12 + Math.random() * 0.12);
+      p.color = i % 2 === 0 ? '#ffffff' : TSPIN_FLASH_COLOR;
+      p.gravity = 0.0006;
+      p.drag = 0.997;
+      p.rotation = Math.random() * Math.PI;
+      p.spin = (Math.random() - 0.5) * 0.03;
+      p.shape = 'square';
+    }
+  }
+
+  /**
+   * 4列消しの盤面全体エフェクト。
+   * 白い横スイープ・金色リング・盤面下からの光の柱。
+   */
+  private drawTetrisOverlay(ctx: CanvasRenderingContext2D, state: GameState): void {
+    const clearing = state.clearing;
+    if (clearing === null || clearing.rows.length < 4) return;
+
+    const flash = this.quality.getProfile().flashScale;
+    const elapsed = clearing.elapsedMs;
+
+    // 消える4行の範囲
+    let top = Infinity;
+    let bottom = -Infinity;
+    for (const row of clearing.rows) {
+      top = Math.min(top, row);
+      bottom = Math.max(bottom, row);
+    }
+    const bandTop = (top - BOARD_BUFFER_HEIGHT) * GRID.cellPitch;
+    const bandHeight = (bottom - top + 1) * GRID.cellPitch;
+
+    // ② 白い横スイープ
+    const wipeT = (elapsed - TETRIS_FX.chargeMs) / TETRIS_FX.wipeMs;
+    if (wipeT > 0 && wipeT < 1) {
+      const front = cubicBezier(EASING.tetWipe, wipeT) * (BOARD_PX_WIDTH + 80) - 40;
+      const gradient = ctx.createLinearGradient(front - 40, 0, front + 40, 0);
+      gradient.addColorStop(0, 'rgba(255,255,255,0)');
+      gradient.addColorStop(0.5, `rgba(255,255,255,${0.95 * flash})`);
+      gradient.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(front - 40, bandTop, 80, bandHeight);
+    }
+
+    const burstStart = TETRIS_FX.chargeMs + TETRIS_FX.wipeMs;
+
+    // 盤面下から立ち上がる光の柱
+    const pillarT = clamp01((elapsed - burstStart) / TETRIS_FX.pillarMs);
+    if (pillarT > 0 && pillarT < 1) {
+      const height = BOARD_PX_HEIGHT * Math.min(1, pillarT * 2.2);
+      const alpha = (1 - pillarT) * 0.55 * flash;
+      const gradient = ctx.createLinearGradient(0, BOARD_PX_HEIGHT, 0, BOARD_PX_HEIGHT - height);
+      gradient.addColorStop(0, withAlpha(TETRIS_PILLAR_COLOR, alpha));
+      gradient.addColorStop(1, withAlpha(TETRIS_PILLAR_COLOR, 0));
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, BOARD_PX_HEIGHT - height, BOARD_PX_WIDTH, height);
+    }
+
+    // 金色リングが横楕円で拡散する
+    const ringT = clamp01((elapsed - burstStart) / TETRIS_FX.ringMs);
+    if (ringT > 0 && ringT < 1) {
+      const centerY = bandTop + bandHeight / 2;
+      const scale = 0.2 + (TETRIS_FX.ringToScale - 0.2) * ringT;
+      ctx.save();
+      ctx.globalAlpha = (1 - ringT) * 0.9 * flash;
+      ctx.strokeStyle = TETRIS_RING_COLOR;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.ellipse(
+        BOARD_PX_WIDTH / 2,
+        centerY,
+        (BOARD_PX_WIDTH / 2) * scale,
+        (bandHeight / 2) * scale,
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.stroke();
+      ctx.restore();
     }
   }
 
@@ -782,6 +1416,15 @@ export class GameRenderer {
     if (squash === null || state.clearing !== null) return;
 
     const t = clamp01(1 - squash.life / squash.maxLife);
+
+    // T-Spin は「一瞬だけ縮む」ので、伸び返しのない単純な山にする
+    if (squash.depth !== undefined) {
+      const dip = Math.sin(t * Math.PI);
+      const s = 1 - (1 - squash.depth) * dip;
+      this.drawSquashCells(ctx, state, squash, s, s);
+      return;
+    }
+
     const power = squash.strong ? 1 : 0.45;
 
     // 3段階の折れ線で「潰れ → 伸び → 戻り」を作る
@@ -803,7 +1446,17 @@ export class GameRenderer {
       scaleX = 1 + (0.94 - 1) * (1 - k) * power;
     }
 
-    // 底面中央を原点にする
+    this.drawSquashCells(ctx, state, squash, scaleX, scaleY);
+  }
+
+  /** 潰したセル群を、底面中央を原点にして描く */
+  private drawSquashCells(
+    ctx: CanvasRenderingContext2D,
+    state: GameState,
+    squash: Squash,
+    scaleX: number,
+    scaleY: number,
+  ): void {
     let minX = Infinity;
     let maxX = -Infinity;
     let maxY = -Infinity;
@@ -1244,6 +1897,13 @@ export class GameRenderer {
       }
     });
   }
+}
+
+/** T-Spin の段階。SINGLE→DOUBLE→TRIPLE で枠色を昇格させる */
+function tspinTier(clearType: string): number {
+  if (clearType === 'tspin-triple') return 2;
+  if (clearType === 'tspin-double') return 1;
+  return 0;
 }
 
 /** 重力落下のイージングを外部から使うためのヘルパー */
