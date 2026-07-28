@@ -4,9 +4,9 @@ services:
     runtime: node
     plan: free
     region: singapore
+    repo: https://github.com/litz-s/dopatetris.git
     branch: main
     buildCommand: npm ci && npm run build
     startCommand: npm start
     healthCheckPath: /health
     autoDeployTrigger: commit
-    maxShutdownDelaySeconds: 15
