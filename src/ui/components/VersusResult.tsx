@@ -51,7 +51,9 @@ export function VersusResult({ standings, rivals, you, hud, onRematch, onLeave }
     <div className="overlay versus-result">
       <div className="versus-result-inner">
         <div className="versus-result-head">
-          <h1 className={`overlay-title ${won ? 'is-win' : ''}`}>{won ? 'WINNER!' : 'GAME OVER'}</h1>
+          <h1 className={`overlay-title ${won ? 'is-win' : ''}`}>
+            {won ? 'WINNER!' : 'GAME OVER'}
+          </h1>
           <span className="mono-9">FINAL STANDINGS</span>
         </div>
 

@@ -34,6 +34,8 @@ import {
   EASING,
   GRAVITY,
   HARD_DROP,
+  ROTATE,
+  ROTATE_CENTER,
   TETRIS_FX,
   TETRIS_PILLAR_COLOR,
   TETRIS_RING_COLOR,
@@ -194,6 +196,24 @@ export class GameRenderer {
   private tspin: TSpinFx | null = null;
   /** イベントタイルVFXの発火予約 */
   private readonly eventVfxQueue: ScheduledEventVfx[] = [];
+
+  /**
+   * 回転を 90ms かけて見せるための状態（05-H）。
+   * dx/dy はキックによるズレで、確定後の位置からの差分として持つ。
+   * こうしておけば回転中に左右移動や落下が入っても引きずられない。
+   */
+  private rotateFx: {
+    dir: 'cw' | 'ccw';
+    dx: number;
+    dy: number;
+    elapsedMs: number;
+  } | null = null;
+
+  /**
+   * このフレームで発火したイベントVFXの種別。
+   * スタックUIの該当スロットを同時に着弾させるために UI 側が引き取る（05-K 共通）。
+   */
+  private readonly stackHits: EventKind[] = [];
   /** リングや光柱などの重ね描き */
   private readonly overlays: Overlay[] = [];
 
@@ -256,6 +276,15 @@ export class GameRenderer {
   }
 
   /**
+   * 直近フレームで発火したイベントVFXの種別を取り出す（取り出したら空になる）。
+   * スタックUIのスロットを VFX と同じタイミングで弾ませるために使う。
+   */
+  drainStackHits(): EventKind[] {
+    if (this.stackHits.length === 0) return [];
+    return this.stackHits.splice(0, this.stackHits.length);
+  }
+
+  /**
    * BGM の拍内位相を受け取る。
    * 0 が渡され続ける（BGM停止中）場合は、内部時計から拍を作って脈動を止めない。
    */
@@ -275,6 +304,15 @@ export class GameRenderer {
   // ------------------------------------------------------------ イベント反応
 
   handleEvents(events: readonly GameEvent[], state: GameState): void {
+    // フィーバーと爆発が重なるフレームはパーティクルを50%に落とす（06 NOTES）。
+    // 間引きたいのは爆発そのものの一斉放出なので、profile を取る前に判定しておく。
+    // ここで見ないと、放出が済んだ次のフレームからしか効かない。
+    this.feverActive = state.fever.until > state.elapsedMs;
+    if (events.some((event) => event.kind === 'bombCleared')) {
+      this.explodingUntilMs = this.elapsedMs + BOMB.scatterMs;
+    }
+    this.quality.setCongested(this.feverActive && this.explodingUntilMs > this.elapsedMs);
+
     const tier = this.quality.getTier();
     const profile = this.quality.getProfile();
 
@@ -320,7 +358,19 @@ export class GameRenderer {
 
     for (const event of events) {
       switch (event.kind) {
+        case 'pieceRotated': {
+          // 確定後の姿勢との差分だけ持ち、描画が 90ms かけて追いつく
+          const now = state.active;
+          this.rotateFx = {
+            dir: event.dir,
+            dx: now === null ? 0 : event.fromX - now.x,
+            dy: now === null ? 0 : event.fromY - now.y,
+            elapsedMs: 0,
+          };
+          break;
+        }
         case 'hardDropped': {
+          this.rotateFx = null;
           this.punch(SHAKE.hardDrop.amplitude, SHAKE.hardDrop.durationMs, 0, profile.shakeScale);
           this.emitHardDropDebris(event.type, event.rot, event.x, event.toY, tier);
 
@@ -352,6 +402,7 @@ export class GameRenderer {
         }
 
         case 'pieceLocked': {
+          this.rotateFx = null;
           const cells = getShape(event.type, event.rot).map(
             ([dx, dy]) => [event.x + dx, event.y + dy] as const,
           );
@@ -382,7 +433,6 @@ export class GameRenderer {
             SHAKE.bombBig.rotationDeg,
             profile.shakeScale,
           );
-          this.explodingUntilMs = this.elapsedMs + BOMB.scatterMs;
           this.flashes.push({
             life: BOMB.screenFlashMs,
             maxLife: BOMB.screenFlashMs,
@@ -449,9 +499,6 @@ export class GameRenderer {
           break;
       }
     }
-
-    this.feverActive = state.fever.until > state.elapsedMs;
-    this.quality.setCongested(this.feverActive && this.explodingUntilMs > this.elapsedMs);
   }
 
   // ------------------------------------------------------------ 更新
@@ -489,6 +536,11 @@ export class GameRenderer {
     if (this.speedLinesMs > 0) this.speedLinesMs -= deltaMs;
     if (this.garbageImpactMs > 0) this.garbageImpactMs -= deltaMs;
 
+    if (this.rotateFx !== null) {
+      this.rotateFx.elapsedMs += deltaMs;
+      if (this.rotateFx.elapsedMs >= ROTATE.durationMs) this.rotateFx = null;
+    }
+
     if (this.tspin !== null) {
       this.tspin.elapsedMs += deltaMs;
       if (this.tspin.elapsedMs > TSPIN.outlineMs + TSPIN.outlineFadeMs) this.tspin = null;
@@ -499,6 +551,9 @@ export class GameRenderer {
       const head = this.eventVfxQueue[0];
       if (head === undefined || head.at > this.elapsedMs) break;
       this.eventVfxQueue.shift();
+      // スタックUIのスロットを同フレームで着弾させるため、種別を外へ渡す。
+      // パーティクルを切っていても UI の合図は出したいので、描画より先に積む。
+      this.stackHits.push(head.kind);
       this.fireEventVfx(head);
     }
 
@@ -596,7 +651,12 @@ export class GameRenderer {
       // 対向色のスポットを斜めに走らせ、単色べた塗りに見えないようにする
       const sweep = (this.elapsedMs % (BEAT_MS * 2)) / (BEAT_MS * 2);
       const beamX = -BOARD_PX_WIDTH + sweep * BOARD_PX_WIDTH * 3;
-      const gradient = ctx.createLinearGradient(beamX, 0, beamX + BOARD_PX_WIDTH * 0.9, BOARD_PX_HEIGHT);
+      const gradient = ctx.createLinearGradient(
+        beamX,
+        0,
+        beamX + BOARD_PX_WIDTH * 0.9,
+        BOARD_PX_HEIGHT,
+      );
       gradient.addColorStop(0, withAlpha(this.getDiscoColor(3), 0));
       gradient.addColorStop(0.5, withAlpha(this.getDiscoColor(3), 0.28 * flash));
       gradient.addColorStop(1, withAlpha(this.getDiscoColor(3), 0));
@@ -624,7 +684,8 @@ export class GameRenderer {
   private drawSpeedLines(ctx: CanvasRenderingContext2D): void {
     if (this.speedLinesMs <= 0) return;
 
-    const alpha = clamp01(this.speedLinesMs / SPEED_LINES_MS) * this.quality.getProfile().flashScale;
+    const alpha =
+      clamp01(this.speedLinesMs / SPEED_LINES_MS) * this.quality.getProfile().flashScale;
     const cx = BOARD_PX_WIDTH / 2;
     const cy = BOARD_PX_HEIGHT / 2;
     const radius = Math.hypot(cx, cy);
@@ -1119,11 +1180,21 @@ export class GameRenderer {
       } else if (overlay.shape === 'beam') {
         // 真上に立ち上がる光の柱
         const height = overlay.scale * Math.min(1, t * 2);
-        const gradient = ctx.createLinearGradient(overlay.x, overlay.y, overlay.x, overlay.y - height);
+        const gradient = ctx.createLinearGradient(
+          overlay.x,
+          overlay.y,
+          overlay.x,
+          overlay.y - height,
+        );
         gradient.addColorStop(0, withAlpha(overlay.color, alpha * 0.9));
         gradient.addColorStop(1, withAlpha(overlay.color, 0));
         ctx.fillStyle = gradient;
-        ctx.fillRect(overlay.x - GRID.cellBody * 0.4, overlay.y - height, GRID.cellBody * 0.8, height);
+        ctx.fillRect(
+          overlay.x - GRID.cellBody * 0.4,
+          overlay.y - height,
+          GRID.cellBody * 0.8,
+          height,
+        );
       } else {
         // 落下が緩む合図の水平線
         const width = overlay.scale * Math.min(1, t * 3);
@@ -1544,6 +1615,26 @@ export class GameRenderer {
     const piece = state.active;
     if (piece === null) return;
 
+    // 回転の 90ms（05-H）。確定後の形を逆回しして回転前の姿に重ね、そこから戻す。
+    // ゴーストは着地点を示すものなので回さない。
+    const fx = this.rotateFx;
+    const rotating = fx !== null;
+    if (fx !== null) {
+      const t = cubicBezier(EASING.rotate, clamp01(fx.elapsedMs / ROTATE.durationMs));
+      const back = 1 - t;
+      const center = ROTATE_CENTER[piece.type] ?? [1, 1];
+      const cx = (piece.x + (center[0] ?? 1)) * GRID.cellPitch + GRID.cellBody / 2;
+      const cy =
+        (piece.y + (center[1] ?? 1) - BOARD_BUFFER_HEIGHT) * GRID.cellPitch + GRID.cellBody / 2;
+      // canvas は y 下向きなので、正の rotate が時計回りになる
+      const angle = (fx.dir === 'cw' ? -1 : 1) * back * (Math.PI / 2);
+
+      ctx.save();
+      ctx.translate(cx + fx.dx * GRID.cellPitch * back, cy + fx.dy * GRID.cellPitch * back);
+      ctx.rotate(angle);
+      ctx.translate(-cx, -cy);
+    }
+
     getShape(piece.type, piece.rot).forEach(([dx, dy], index) => {
       const by = piece.y + dy;
       if (by < BOARD_BUFFER_HEIGHT) return;
@@ -1557,6 +1648,8 @@ export class GameRenderer {
         drawBlock(ctx, px, py, GRID.cellBody, MINO_COLORS[piece.type]);
       }
     });
+
+    if (rotating) ctx.restore();
   }
 
   private drawShockwaves(ctx: CanvasRenderingContext2D): void {
@@ -1580,7 +1673,10 @@ export class GameRenderer {
     if (this.garbageImpactMs > 0) {
       const t = clamp01(this.garbageImpactMs / GARBAGE_IMPACT_MS);
       const gradient = ctx.createLinearGradient(0, BOARD_PX_HEIGHT, 0, BOARD_PX_HEIGHT * 0.4);
-      gradient.addColorStop(0, withAlpha('#ff2f2f', 0.6 * t * this.quality.getProfile().flashScale));
+      gradient.addColorStop(
+        0,
+        withAlpha('#ff2f2f', 0.6 * t * this.quality.getProfile().flashScale),
+      );
       gradient.addColorStop(1, withAlpha('#ff2f2f', 0));
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, BOARD_PX_WIDTH, BOARD_PX_HEIGHT);

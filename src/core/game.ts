@@ -744,7 +744,15 @@ function applyCommand(state: GameState, command: Command, sink: EventSink): Game
         const y = piece.y + kick[1];
         if (!canPlace(state.board, piece.type, to, x, y)) continue;
 
-        sink.emit({ kind: 'pieceRotated', kicked: i > 0 });
+        sink.emit({
+          kind: 'pieceRotated',
+          kicked: i > 0,
+          type: piece.type,
+          fromRot: piece.rot,
+          fromX: piece.x,
+          fromY: piece.y,
+          dir: command.dir,
+        });
         return resetLockDelay({
           ...state,
           active: { ...piece, rot: to, x, y },

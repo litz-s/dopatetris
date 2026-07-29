@@ -14,9 +14,30 @@ const validSnapshot = {
 
 describe('公開メッセージの検証', () => {
   it('正しい部屋作成を受け入れる', () => {
+    expect(
+      parseClientMessage(JSON.stringify({ kind: 'createRoom', name: 'SUZU', version: 2 })),
+    ).toEqual({
+      kind: 'createRoom',
+      name: 'SUZU',
+      version: 2,
+    });
+  });
+
+  it('版を持たない旧クライアントは版0として通す', () => {
+    // 握り潰すと「なぜ入れないのか」が伝わらないので、
+    // 解析は通して版の照合で弾けるようにしておく
     expect(parseClientMessage(JSON.stringify({ kind: 'createRoom', name: 'SUZU' }))).toEqual({
       kind: 'createRoom',
       name: 'SUZU',
+      version: 0,
+    });
+    expect(
+      parseClientMessage(JSON.stringify({ kind: 'joinRoom', code: 'ABCD', name: 'SUZU' })),
+    ).toEqual({
+      kind: 'joinRoom',
+      code: 'ABCD',
+      name: 'SUZU',
+      version: 0,
     });
   });
 

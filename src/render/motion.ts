@@ -114,6 +114,29 @@ export const COMBO = {
 // ================================================================ 05 HYPE MOMENTS
 
 /**
+ * 回転そのものを見せる 90ms（デザイン仕様 05-H）。
+ *
+ * core は回転を即時に確定させ、描画だけが遅れて追いつく。
+ * 仕様の記述は T-SPIN の項にあるが、T-Spin かどうかは固定するまで分からないため
+ * 「回転」全般に掛ける。判定・当たりは常に確定後の姿勢で行われる。
+ */
+export const ROTATE = { durationMs: 90 } as const;
+
+/**
+ * 回転の中心（バウンディングボックス内のセル座標）。
+ * SRS の回転はこの点まわりなので、確定後の形をここで逆回しすると回転前の形に重なる。
+ */
+export const ROTATE_CENTER: Record<string, readonly [number, number]> = {
+  I: [1.5, 1.5],
+  O: [1.5, 0.5],
+  J: [1, 1],
+  L: [1, 1],
+  S: [1, 1],
+  T: [1, 1],
+  Z: [1, 1],
+};
+
+/**
  * H: T-SPIN — カチッとはまる一瞬。
  * 回転から固定までを1フレームで止めるのが要点。
  */
@@ -309,6 +332,28 @@ export const CASH_COLORS: Record<CashKind, string> = {
   bill: '#f4f0e2',
 };
 
+/**
+ * 20コンボ以降は斉射に紙吹雪が足される（05-L 連動）。
+ * 弾ではないので、同時40個の上限とは別枠で数える。
+ */
+export const CASH_CONFETTI = {
+  fromCombo: 20,
+  /** 1斉射あたりの枚数 */
+  count: 18,
+  maxAlive: 90,
+  fallMs: 2200,
+  sizeMin: 5,
+  sizeMax: 11,
+} as const;
+
+export const CASH_CONFETTI_COLORS = [
+  '#ffe600',
+  '#ff2f92',
+  '#00e5ff',
+  '#34d94b',
+  '#f4f0e2',
+] as const;
+
 /** コンボ段階ごとの斉射数 */
 export function getCashVolleyCount(combo: number): number {
   if (combo >= 20) return CASH_CANNON.countAtCombo20;
@@ -377,6 +422,8 @@ export const EASING = {
   comboPop: [0.2, 1.6, 0.3, 1],
   /** 4列消しの白い横スイープ */
   tetWipe: [0.4, 0, 0.2, 1],
+  /** 回転。終端で軽く行き過ぎてから止まる */
+  rotate: [0.16, 1.5, 0.3, 1],
   /** T-Spin のはめ込みと文字スラム */
   slam: [0.16, 1.5, 0.3, 1],
   /** 現金砲の放物線 */
@@ -406,10 +453,7 @@ export function cubicBezierInverse(
  * 三次ベジェを数値評価する。CSS と同じ形状のイージングを Canvas 側でも使うため。
  * ニュートン法で x から t を求め、その t での y を返す。
  */
-export function cubicBezier(
-  spec: readonly [number, number, number, number],
-  x: number,
-): number {
+export function cubicBezier(spec: readonly [number, number, number, number], x: number): number {
   const [x1, y1, x2, y2] = spec;
   const clamped = x < 0 ? 0 : x > 1 ? 1 : x;
 
@@ -423,8 +467,7 @@ export function cubicBezier(
     const currentX = bezier(x1, x2, t) - clamped;
     if (Math.abs(currentX) < 1e-4) break;
     const u = 1 - t;
-    const derivative =
-      3 * u * u * x1 + 6 * u * t * (x2 - x1) + 3 * t * t * (1 - x2);
+    const derivative = 3 * u * u * x1 + 6 * u * t * (x2 - x1) + 3 * t * t * (1 - x2);
     if (Math.abs(derivative) < 1e-6) break;
     t -= currentX / derivative;
     t = t < 0 ? 0 : t > 1 ? 1 : t;

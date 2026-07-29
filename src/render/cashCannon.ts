@@ -9,6 +9,8 @@
 import {
   CASH_CANNON,
   CASH_COLORS,
+  CASH_CONFETTI,
+  CASH_CONFETTI_COLORS,
   CASH_KINDS,
   EASING,
   cubicBezier,
@@ -37,12 +39,27 @@ type Bullet = {
 
 type Muzzle = { x: number; y: number; life: number };
 
+/** 20コンボ以降だけ足される紙吹雪。弾より軽く、ひらひら落ちる */
+type Confetti = {
+  alive: boolean;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  color: string;
+  /** ひらひらの位相 */
+  flutter: number;
+  elapsedMs: number;
+};
+
 /** 盤面が画面内で占める矩形。ここに重なる弾は薄くする */
 export type BoardRect = { x: number; y: number; width: number; height: number };
 
 export class CashCannon {
   private readonly bullets: Bullet[] = [];
   private readonly muzzles: Muzzle[] = [];
+  private readonly confetti: Confetti[] = [];
 
   private width = 0;
   private height = 0;
@@ -68,6 +85,19 @@ export class CashCannon {
         size: 14,
         spin: 0,
         flutter: 0,
+      });
+    }
+    for (let i = 0; i < CASH_CONFETTI.maxAlive; i++) {
+      this.confetti.push({
+        alive: false,
+        x: 0,
+        y: 0,
+        vx: 0,
+        vy: 0,
+        size: 6,
+        color: '#ffe600',
+        flutter: 0,
+        elapsedMs: 0,
       });
     }
   }
@@ -117,11 +147,47 @@ export class CashCannon {
       if (bullet.elapsedMs - bullet.delayMs > CASH_CANNON.flightMs) bullet.alive = false;
     }
 
+    for (const piece of this.confetti) {
+      if (!piece.alive) continue;
+      piece.elapsedMs += deltaMs;
+      piece.x += piece.vx * deltaMs;
+      piece.y += piece.vy * deltaMs;
+      // 空気抵抗で横は緩み、縦は落下へ転じる
+      piece.vx *= 0.996;
+      piece.vy += 0.0011 * deltaMs;
+      if (piece.elapsedMs > CASH_CONFETTI.fallMs || piece.y > this.height + 40) {
+        piece.alive = false;
+      }
+    }
+
     for (let i = this.muzzles.length - 1; i >= 0; i--) {
       const muzzle = this.muzzles[i];
       if (muzzle === undefined) continue;
       muzzle.life -= deltaMs;
       if (muzzle.life <= 0) this.muzzles.splice(i, 1);
+    }
+  }
+
+  /** 20コンボ以降の紙吹雪。砲口から扇状に噴き上げる */
+  private fireConfetti(originX: number, originY: number, particleScale: number): void {
+    const count = Math.round(CASH_CONFETTI.count * particleScale);
+    for (let i = 0; i < count; i++) {
+      const piece = this.confetti.find((c) => !c.alive);
+      if (piece === undefined) return;
+
+      const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.5;
+      const speed = 0.35 + Math.random() * 0.55;
+      piece.alive = true;
+      piece.x = originX;
+      piece.y = originY;
+      piece.vx = Math.cos(angle) * speed;
+      piece.vy = Math.sin(angle) * speed;
+      piece.size =
+        CASH_CONFETTI.sizeMin + Math.random() * (CASH_CONFETTI.sizeMax - CASH_CONFETTI.sizeMin);
+      piece.color =
+        CASH_CONFETTI_COLORS[Math.floor(Math.random() * CASH_CONFETTI_COLORS.length)] ?? '#ffe600';
+      piece.flutter = Math.random() * Math.PI * 2;
+      piece.elapsedMs = 0;
     }
   }
 
@@ -141,6 +207,9 @@ export class CashCannon {
 
     this.muzzles.push({ x: originX, y: originY, life: CASH_CANNON.muzzleMs });
 
+    // 20コンボ以降は紙吹雪も足す
+    if (combo >= CASH_CONFETTI.fromCombo) this.fireConfetti(originX, originY, particleScale);
+
     for (let i = 0; i < count; i++) {
       const bullet = this.bullets.find((b) => !b.alive);
       // 上限に達したら生成しない（超過分は捨てる方針）
@@ -153,7 +222,8 @@ export class CashCannon {
       // 飛距離を個体ごとにばらす
       bullet.spanX = direction * this.width * (0.35 + Math.random() * 0.55);
       bullet.peakY =
-        -this.height * (CASH_CANNON.peakMin + Math.random() * (CASH_CANNON.peakMax - CASH_CANNON.peakMin));
+        -this.height *
+        (CASH_CANNON.peakMin + Math.random() * (CASH_CANNON.peakMax - CASH_CANNON.peakMin));
       bullet.elapsedMs = 0;
       bullet.delayMs = i * CASH_CANNON.shotStaggerMs;
       bullet.size = bullet.kind === 'coinLarge' ? 18 : bullet.kind === 'bundle' ? 22 : 14;
@@ -207,20 +277,57 @@ export class CashCannon {
         const flutter = Math.abs(Math.cos(bullet.flutter + local * 0.008));
         ctx.scale(Math.max(0.15, flutter), 1);
         ctx.rotate(Math.sin(bullet.flutter + local * 0.004) * 0.5);
-        ctx.fillRect(-bullet.size * 0.7, -bullet.size * 0.42, bullet.size * 1.4, bullet.size * 0.84);
+        ctx.fillRect(
+          -bullet.size * 0.7,
+          -bullet.size * 0.42,
+          bullet.size * 1.4,
+          bullet.size * 0.84,
+        );
         if (bullet.kind === 'bundle') {
           ctx.fillStyle = '#0f0a18';
-          ctx.fillRect(-bullet.size * 0.7, -bullet.size * 0.12, bullet.size * 1.4, bullet.size * 0.24);
+          ctx.fillRect(
+            -bullet.size * 0.7,
+            -bullet.size * 0.12,
+            bullet.size * 1.4,
+            bullet.size * 0.24,
+          );
         }
       } else {
         // 硬貨は回転させる
         ctx.rotate(bullet.spin * eased);
         const flip = Math.abs(Math.cos(bullet.spin * eased * 2));
         ctx.beginPath();
-        ctx.ellipse(0, 0, Math.max(1, (bullet.size / 2) * flip), bullet.size / 2, 0, 0, Math.PI * 2);
+        ctx.ellipse(
+          0,
+          0,
+          Math.max(1, (bullet.size / 2) * flip),
+          bullet.size / 2,
+          0,
+          0,
+          Math.PI * 2,
+        );
         ctx.fill();
       }
 
+      ctx.restore();
+    }
+
+    // 紙吹雪は弾より奥・小さく。盤面に重なる区間はやはり薄くする
+    for (const piece of this.confetti) {
+      if (!piece.alive) continue;
+      let alpha = 1 - Math.max(0, piece.elapsedMs / CASH_CONFETTI.fallMs - 0.7) / 0.3;
+      if (board !== null && overlaps(piece.x, piece.y, piece.size, board)) {
+        alpha *= CASH_CANNON.overBoardAlpha;
+      }
+
+      ctx.globalAlpha = Math.max(0, alpha);
+      ctx.fillStyle = piece.color;
+      ctx.save();
+      ctx.translate(piece.x, piece.y);
+      ctx.rotate(piece.flutter + piece.elapsedMs * 0.006);
+      // 横幅を潰してひらひらさせる
+      ctx.scale(Math.max(0.12, Math.abs(Math.cos(piece.flutter + piece.elapsedMs * 0.009))), 1);
+      ctx.fillRect(-piece.size / 2, -piece.size / 4, piece.size, piece.size / 2);
       ctx.restore();
     }
 
@@ -230,6 +337,7 @@ export class CashCannon {
 
   clear(): void {
     for (const bullet of this.bullets) bullet.alive = false;
+    for (const piece of this.confetti) piece.alive = false;
     this.muzzles.length = 0;
   }
 }

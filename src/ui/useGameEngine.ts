@@ -23,7 +23,14 @@ import type { BoardSnapshot } from '@net/protocol';
 import { encodeBoard } from '@net/snapshot';
 import { buildHypeEvents } from './hype';
 import type { HypeEvent } from './hype';
-import type { EventStack, GameState, GameStats, HeldMino, QueuedMino } from '@core/types';
+import type {
+  EventKind,
+  EventStack,
+  GameState,
+  GameStats,
+  HeldMino,
+  QueuedMino,
+} from '@core/types';
 import { InputManager } from '@input/inputManager';
 import type { KeyLogEntry } from '@input/inputManager';
 import { audioEngine } from '@audio/audioEngine';
@@ -60,6 +67,12 @@ export type HudSnapshot = {
   tier: QualityTier;
   particles: number;
 };
+
+/**
+ * スタックUIのスロット着弾の合図。id はイベントVFXが出るたびに増える。
+ * event が現在のスタック種別と一致するときだけ「加算された」ことになる。
+ */
+export type StackHit = { id: number; event: EventKind } | null;
 
 /** HUD の更新間隔。60fps で React を回さないための間引き */
 const HUD_INTERVAL_MS = 70;
@@ -116,6 +129,12 @@ export function useGameEngine(
   const [paused, setPaused] = useState(false);
   /** T-SPIN / TETRIS / スコアポップの文字グラフィック */
   const [hype, setHype] = useState<HypeEvent[]>([]);
+  /**
+   * スタックUIのスロットを弾ませる合図（05-K 共通）。
+   * イベントVFXが発火したフレームに更新され、種別が今のスタックと同じときだけ
+   * 「加算された」ことになる。id が変わったことでUI側がアニメを撃ち直す。
+   */
+  const [stackHit, setStackHit] = useState<StackHit>(null);
 
   const restart = useCallback(() => {
     const multi = multiRef.current;
@@ -200,6 +219,8 @@ export function useGameEngine(
     let hudTimer = 0;
     let snapshotTimer = 0;
     let reportedTopOut = false;
+    /** スタック着弾の通し番号。同じ種別が連続しても React に伝わるようにする */
+    let stackHitId = 0;
 
     const frame = (now: number): void => {
       rafRef.current = requestAnimationFrame(frame);
@@ -271,6 +292,13 @@ export function useGameEngine(
       // BGM の拍を描画へ渡し、背景の脈動とグリッド明滅を曲に同期させる
       renderer.setBeatPhase(audioEngine.getBeatPhase());
       renderer.render(current);
+
+      // イベントVFXが出たフレームで、スタックUIの該当スロットも着弾させる
+      const hits = renderer.drainStackHits();
+      const lastHit = hits[hits.length - 1];
+      if (lastHit !== undefined) {
+        setStackHit({ id: stackHitId++, event: lastHit });
+      }
 
       // フィーバー現金砲。終了しても飛んでいる弾は落ちきるまで描く
       const cashCanvas = cashRef?.current;
@@ -376,5 +404,14 @@ export function useGameEngine(
     renderer.resize(canvas, cabinetScale);
   }, [cabinetScale, canvasRef]);
 
-  return { hud, hype, paused, restart, togglePause, renderer: rendererRef, input: inputRef };
+  return {
+    hud,
+    hype,
+    stackHit,
+    paused,
+    restart,
+    togglePause,
+    renderer: rendererRef,
+    input: inputRef,
+  };
 }

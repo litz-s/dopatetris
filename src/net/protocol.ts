@@ -5,7 +5,19 @@
  * このファイルでは enum や namespace など変換が必要な構文を使わない。
  */
 
-export const PROTOCOL_VERSION = 1;
+/**
+ * 通信プロトコルの版。
+ *
+ * クライアントは同一の決定論コアを各自で回すため、コアの挙動が変わると
+ * 版を上げないと古いタブと新しいタブで盤面が無言でずれる。
+ * 版を変えるのは「通信の形」だけでなく「core の挙動」を変えたときも。
+ *
+ * 2: 4列消しの停止時間を専用演出ぶん延長（710ms → 870ms）
+ */
+export const PROTOCOL_VERSION = 2;
+
+/** 版が合わないときにサーバーが返す文言 */
+export const VERSION_MISMATCH_MESSAGE = 'アプリが更新されています。ページを再読み込みしてください';
 
 /** 1部屋の最大人数 */
 export const MAX_PLAYERS = 4;
@@ -79,8 +91,9 @@ export type BoardSnapshot = {
 // ---------------------------------------------------------------- クライアント → サーバー
 
 export type ClientMessage =
-  | { kind: 'createRoom'; name: string }
-  | { kind: 'joinRoom'; code: string; name: string }
+  /** version はサーバーで照合する。合わなければ入室させない */
+  | { kind: 'createRoom'; name: string; version: number }
+  | { kind: 'joinRoom'; code: string; name: string; version: number }
   | { kind: 'leaveRoom' }
   /** 対戦終了後、同じ顔ぶれでロビーへ戻る */
   | { kind: 'returnToLobby' }

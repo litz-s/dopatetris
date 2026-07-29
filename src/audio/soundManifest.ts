@@ -20,6 +20,14 @@ export type SoundCue =
   | 'clearPop'
   | 'lineClear'
   | 'tetris'
+  /** 4列消しのチャージ。240ms かけて唸りながら上がる */
+  | 'tetrisCharge'
+  /** 白い横スイープが盤面を貫く 200ms */
+  | 'tetrisSweep'
+  /** 圧縮消滅の着弾 */
+  | 'tetrisImpact'
+  /** T-Spin の「カチッ」。紫フラッシュと同フレーム */
+  | 'tspin'
   | 'explode'
   | 'gravityLand'
   | 'feverStart'
@@ -44,9 +52,7 @@ export type SoundCue =
 
 export const SOUND_MANIFEST: Record<SoundCue, AudioSource> = {
   // ---- 操作
-  move: new SynthSource([
-    { wave: 'square25', freq: 320, durationMs: 32, gain: 0.1, attackMs: 1 },
-  ]),
+  move: new SynthSource([{ wave: 'square25', freq: 320, durationMs: 32, gain: 0.1, attackMs: 1 }]),
   rotate: new SynthSource([
     { wave: 'square', freq: 420, freqEnd: 620, durationMs: 55, gain: 0.12, attackMs: 1 },
   ]),
@@ -79,6 +85,34 @@ export const SOUND_MANIFEST: Record<SoundCue, AudioSource> = {
     { wave: 'square', freq: 784, durationMs: 90, gain: 0.16, delayMs: 110 },
     { wave: 'square', freq: 1046, durationMs: 220, gain: 0.18, delayMs: 165 },
     { wave: 'triangle', freq: 130, durationMs: 300, gain: 0.22 },
+  ]),
+
+  /**
+   * 4列消しは左→右のポップではなく「チャージ→スイープ→圧縮」なので、
+   * 音も clearPop の連打をやめて絵の3段に合わせる（デザイン仕様 05-I）。
+   */
+  tetrisCharge: new SynthSource([
+    // 下から溜まっていく唸り。240ms かけて持ち上げる
+    { wave: 'triangle', freq: 70, freqEnd: 300, durationMs: 240, gain: 0.24, attackMs: 40 },
+    { wave: 'square12', freq: 140, freqEnd: 600, durationMs: 240, gain: 0.08, attackMs: 60 },
+  ]),
+  tetrisSweep: new SynthSource([
+    // 盤面を横に走る白い帯。ノイズを開いていく
+    { wave: 'noise', freq: 0, durationMs: 200, gain: 0.2, lowpassHz: 1200, freqEnd: 9000 },
+    { wave: 'square25', freq: 900, freqEnd: 1800, durationMs: 200, gain: 0.09 },
+  ]),
+  tetrisImpact: new SynthSource([
+    // 圧縮して消える瞬間の着弾
+    { wave: 'triangle', freq: 320, freqEnd: 60, durationMs: 220, gain: 0.34 },
+    { wave: 'noise', freq: 0, durationMs: 140, gain: 0.16, lowpassHz: 5000, freqEnd: 300 },
+  ]),
+
+  /** 回転→固定を1フレームで止める感触。短く硬い一撃＋昇る2音 */
+  tspin: new SynthSource([
+    { wave: 'square12', freq: 1600, freqEnd: 900, durationMs: 60, gain: 0.16, attackMs: 1 },
+    { wave: 'noise', freq: 0, durationMs: 70, gain: 0.1, lowpassHz: 7000, freqEnd: 2000 },
+    { wave: 'square', freq: 988, durationMs: 80, gain: 0.14, delayMs: 60 },
+    { wave: 'square', freq: 1319, durationMs: 200, gain: 0.15, delayMs: 150 },
   ]),
 
   // ---- イベントスタック

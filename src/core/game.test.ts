@@ -17,10 +17,13 @@ import {
   FIXED_TIMESTEP_MS,
   GARBAGE_DELAY_MS,
   GRAVITY_DELAY_MS,
+  LINE_CLEAR_DELAY_MS,
   MAX_DROP_CELLS_PER_STEP,
   NEXT_COUNT,
   STACK_COOLDOWN_MS,
+  TETRIS_CLEAR_DELAY_MS,
   TIME_PRESSURE_INTERVAL_MS,
+  getClearDelayMs,
 } from './config/balance';
 import type { MinoType, Rotation } from './types';
 
@@ -641,5 +644,68 @@ describe('フィーバータイム', () => {
     ).state;
 
     expect(second.fever.until - second.elapsedMs).toBe(FEVER_MAX_MS);
+  });
+});
+
+/**
+ * 4列消しは「チャージ→スイープ→圧縮→タメ」の専用演出があり、
+ * その間だけ落下が止まる時間が長い（デザイン仕様 05-I）。
+ * 演出の数値を動かしたときにコア側の停止時間がついてこないと絵と操作がずれるので、
+ * ここで両者の対応を固定しておく。
+ */
+describe('ライン消去の停止時間', () => {
+  /** 指定行を左端だけ空けて埋める */
+  function almostFullRows(state: GameState, rows: number[]): GameState {
+    const board = state.board.map((row) => row.slice());
+    for (const y of rows) {
+      const row = board[y];
+      if (row === undefined) continue;
+      for (let x = 0; x < BOARD_WIDTH; x++) {
+        row[x] = x === 0 ? null : { color: 'I', event: null };
+      }
+    }
+    return { ...state, board };
+  }
+
+  /** 縦向き I を左端に落として rowCount 行そろえる */
+  function clearRows(rowCount: number): GameState {
+    const rows = Array.from({ length: rowCount }, (_, i) => BOARD_HEIGHT - 1 - i);
+    const prepared = almostFullRows(createGame(SEED), rows);
+    return withPieceAt(prepared, 'I', -2, BOARD_HEIGHT - 4, 1);
+  }
+
+  it('段数ごとの停止時間が演出の合計と一致する', () => {
+    expect(getClearDelayMs(1)).toBe(LINE_CLEAR_DELAY_MS);
+    expect(getClearDelayMs(3)).toBe(LINE_CLEAR_DELAY_MS);
+    expect(getClearDelayMs(4)).toBe(TETRIS_CLEAR_DELAY_MS);
+
+    // チャージ240 + スイープ200 + 圧縮140 + タメ60 + 段落下230
+    expect(TETRIS_CLEAR_DELAY_MS).toBe(870);
+    expect(TETRIS_CLEAR_DELAY_MS).toBeGreaterThan(LINE_CLEAR_DELAY_MS);
+  });
+
+  it('1列消しは通常の停止時間で再開する', () => {
+    const dropped = step(clearRows(1), FIXED_TIMESTEP_MS, [{ kind: 'hardDrop' }]).state;
+    expect(dropped.clearing).not.toBeNull();
+
+    // 直前まではまだ止まっている
+    const before = advance(dropped, LINE_CLEAR_DELAY_MS - FIXED_TIMESTEP_MS * 2);
+    expect(before.clearing).not.toBeNull();
+
+    const after = advance(before, FIXED_TIMESTEP_MS * 3);
+    expect(after.clearing).toBeNull();
+  });
+
+  it('4列消しは通常より長く止まる', () => {
+    const dropped = step(clearRows(4), FIXED_TIMESTEP_MS, [{ kind: 'hardDrop' }]).state;
+    expect(dropped.clearing).not.toBeNull();
+    expect(dropped.clearing?.rows.length).toBe(4);
+
+    // 通常の停止時間を過ぎてもまだ再開しない
+    const atNormal = advance(dropped, LINE_CLEAR_DELAY_MS + FIXED_TIMESTEP_MS);
+    expect(atNormal.clearing).not.toBeNull();
+
+    const atTetris = advance(dropped, TETRIS_CLEAR_DELAY_MS + FIXED_TIMESTEP_MS);
+    expect(atTetris.clearing).toBeNull();
   });
 });

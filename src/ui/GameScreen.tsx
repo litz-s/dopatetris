@@ -14,11 +14,14 @@ import { EventIcon } from './components/EventIcon';
 import { HypeLayer } from './components/HypeLayer';
 import { MinoPreview } from './components/MinoPreview';
 import { useGameEngine } from './useGameEngine';
-import type { HudSnapshot } from './useGameEngine';
+import type { HudSnapshot, StackHit } from './useGameEngine';
 import type { Settings } from './storage';
 
 /** 「+1 ×倍率」のライズ＆フェード時間。デザイン仕様 04-F */
 const COMBO_POP_MS = COMBO.riseMs;
+
+/** スタックスロットの着弾（scale 1.4 → 1）。デザイン仕様 05-K 共通 */
+const STACK_SLOT_HIT_MS = 260;
 
 const STACK_LABELS: Record<EventKind, string> = {
   bomb: 'BOMB',
@@ -68,7 +71,7 @@ export function GameScreen({ settings, onFinish, onExit }: Props) {
   const scale = useCabinetScale();
   const finishedRef = useRef(false);
 
-  const { hud, hype, paused, restart, togglePause } = useGameEngine(
+  const { hud, hype, stackHit, paused, restart, togglePause } = useGameEngine(
     { canvasRef, shakeRef, cabinetRef, cashRef },
     scale,
     settings,
@@ -89,7 +92,7 @@ export function GameScreen({ settings, onFinish, onExit }: Props) {
 
       <div className="plate plate-left">
         <HoldPanel hud={hud} />
-        <StackPanel hud={hud} />
+        <StackPanel hud={hud} stackHit={stackHit} />
         <KeyLog hud={hud} />
       </div>
 
@@ -193,13 +196,33 @@ export function HoldPanel({ hud }: { hud: HudSnapshot | null }) {
  * 以下のパネル群はソロと対戦で共通。VersusScreen からも読むため公開している。
  */
 
-export function StackPanel({ hud }: { hud: HudSnapshot | null }) {
+export function StackPanel({
+  hud,
+  stackHit = null,
+}: {
+  hud: HudSnapshot | null;
+  stackHit?: StackHit;
+}) {
   const kind = hud?.stack.kind ?? null;
   const count = hud?.stack.count ?? 0;
   const cooldown = hud?.stackCooldownMs ?? 0;
   const onCooldown = cooldown > 0;
   const ratio = onCooldown ? 1 - cooldown / STACK_COOLDOWN_MS : 1;
   const capacity = getStackMax(kind);
+
+  // イベントVFXが出たフレームで、いま埋まった最後のスロットを弾ませる（05-K 共通）。
+  // 種別が今のスタックと違うものは加算されていないので弾ませない。
+  const [hitIndex, setHitIndex] = useState<number | null>(null);
+  const hitId = stackHit?.id ?? null;
+  const accepted = stackHit !== null && stackHit.event === kind;
+  const targetIndex = count - 1;
+  useEffect(() => {
+    if (hitId === null || !accepted || targetIndex < 0) return;
+    setHitIndex(targetIndex);
+    const timer = window.setTimeout(() => setHitIndex(null), STACK_SLOT_HIT_MS);
+    return () => window.clearTimeout(timer);
+    // 着弾のたびに撃ち直したいので、通し番号だけを見る
+  }, [hitId, accepted, targetIndex]);
 
   return (
     <section className={`panel panel-dark ${kind !== null ? 'is-locked' : ''}`}>
@@ -211,7 +234,9 @@ export function StackPanel({ hud }: { hud: HudSnapshot | null }) {
       <div className="stack-slots">
         {Array.from({ length: kind === null ? STACK_MAX : capacity }, (_, index) =>
           kind !== null && index < count ? (
-            <EventIcon key={index} event={kind} size={48} glow="L2" />
+            <div key={index} className={`stack-slot ${index === hitIndex ? 'is-hit' : ''}`}>
+              <EventIcon event={kind} size={48} glow="L2" />
+            </div>
           ) : (
             <div key={index} className="stack-slot-empty">
               <span className="mono-8">{index + 1}</span>

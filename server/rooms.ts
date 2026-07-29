@@ -2,11 +2,7 @@
  * 部屋の状態管理。通信そのものは扱わず、純粋な状態遷移だけを持つ。
  * こうしておくと接続なしでテストできる。
  */
-import {
-  DEFAULT_ROOM_RULES,
-  MAX_PLAYERS,
-  ROOM_CODE_LENGTH,
-} from '../src/net/protocol.ts';
+import { DEFAULT_ROOM_RULES, MAX_PLAYERS, ROOM_CODE_LENGTH } from '../src/net/protocol.ts';
 import type { PlayerId, PlayerInfo, RoomRules } from '../src/net/protocol.ts';
 
 export type RoomPhase = 'lobby' | 'countdown' | 'playing' | 'finished';

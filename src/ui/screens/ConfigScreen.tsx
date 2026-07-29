@@ -286,9 +286,7 @@ export function ConfigScreen({ settings, onChange, onClose }: Props) {
                     ●
                   </div>
                 </div>
-                <p className="config-note is-light">
-                  フラッシュ設定が glow の強さに反映されます。
-                </p>
+                <p className="config-note is-light">フラッシュ設定が glow の強さに反映されます。</p>
               </section>
             </>
           )}
@@ -338,7 +336,10 @@ export function ConfigScreen({ settings, onChange, onClose }: Props) {
 
                 <div className="config-toggle-row">
                   <span className="config-toggle-label">テスト再生</span>
-                  <button className="config-toggle" onClick={() => audioEngine.play('stackTrigger')}>
+                  <button
+                    className="config-toggle"
+                    onClick={() => audioEngine.play('stackTrigger')}
+                  >
                     PLAY
                   </button>
                 </div>

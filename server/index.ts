@@ -13,7 +13,12 @@ import { createServer } from 'node:http';
 import type { IncomingMessage } from 'node:http';
 import { WebSocketServer } from 'ws';
 import type { WebSocket } from 'ws';
-import { COUNTDOWN_SECONDS, HEARTBEAT_TIMEOUT_MS } from '../src/net/protocol.ts';
+import {
+  COUNTDOWN_SECONDS,
+  HEARTBEAT_TIMEOUT_MS,
+  PROTOCOL_VERSION,
+  VERSION_MISMATCH_MESSAGE,
+} from '../src/net/protocol.ts';
 import type { ClientMessage, PlayerId, ServerMessage } from '../src/net/protocol.ts';
 import {
   ConnectionCounter,
@@ -163,6 +168,10 @@ function handleMessage(socket: WebSocket, message: ClientMessage): void {
 
   switch (message.kind) {
     case 'createRoom': {
+      if (message.version !== PROTOCOL_VERSION) {
+        send(socket, { kind: 'error', message: VERSION_MISMATCH_MESSAGE });
+        return;
+      }
       if (!session.roomCreates.tryConsume(Date.now())) {
         send(socket, { kind: 'error', message: '部屋作成が多すぎます。少し待ってください' });
         return;
@@ -194,6 +203,10 @@ function handleMessage(socket: WebSocket, message: ClientMessage): void {
     }
 
     case 'joinRoom': {
+      if (message.version !== PROTOCOL_VERSION) {
+        send(socket, { kind: 'error', message: VERSION_MISMATCH_MESSAGE });
+        return;
+      }
       const code = message.code.trim().toUpperCase();
       const target = rooms.get(code);
       if (target === undefined) {

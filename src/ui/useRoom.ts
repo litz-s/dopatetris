@@ -5,14 +5,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { netClient } from '@net/client';
 import type { ConnectionState } from '@net/client';
-import { DEFAULT_ROOM_RULES } from '@net/protocol';
-import type {
-  BoardSnapshot,
-  PlayerId,
-  PlayerInfo,
-  RoomRules,
-  ServerMessage,
-} from '@net/protocol';
+import { DEFAULT_ROOM_RULES, PROTOCOL_VERSION } from '@net/protocol';
+import type { BoardSnapshot, PlayerId, PlayerInfo, RoomRules, ServerMessage } from '@net/protocol';
 
 export type ChatLine = { id: number; from: PlayerId; name: string; text: string };
 
@@ -163,12 +157,12 @@ export function useRoom() {
 
   const createRoom = useCallback((name: string) => {
     netClient.connect();
-    netClient.send({ kind: 'createRoom', name });
+    netClient.send({ kind: 'createRoom', name, version: PROTOCOL_VERSION });
   }, []);
 
   const joinRoom = useCallback((roomCode: string, name: string) => {
     netClient.connect();
-    netClient.send({ kind: 'joinRoom', code: roomCode, name });
+    netClient.send({ kind: 'joinRoom', code: roomCode, name, version: PROTOCOL_VERSION });
   }, []);
 
   const leaveRoom = useCallback(() => {

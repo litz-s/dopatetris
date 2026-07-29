@@ -94,7 +94,9 @@ export function LobbyScreen({ room, onExit }: Props) {
             <span className="lobby-waking-dot" aria-hidden="true" />
             <div>
               <strong>対戦サーバーを起動しています</strong>
-              <span>無料サーバーの復帰には最大1分ほどかかります。この画面のままお待ちください。</span>
+              <span>
+                無料サーバーの復帰には最大1分ほどかかります。この画面のままお待ちください。
+              </span>
             </div>
           </div>
         )}

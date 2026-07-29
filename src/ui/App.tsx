@@ -31,15 +31,7 @@ import { useRoom } from './useRoom';
 import './styles.css';
 
 type Screen =
-  | 'warning'
-  | 'menu'
-  | 'game'
-  | 'result'
-  | 'ranking'
-  | 'config'
-  | 'howto'
-  | 'lobby'
-  | 'versus';
+  'warning' | 'menu' | 'game' | 'result' | 'ranking' | 'config' | 'howto' | 'lobby' | 'versus';
 
 export function App() {
   const [screen, setScreen] = useState<Screen>(() =>

@@ -277,6 +277,29 @@ body {
   animation: none;
 }
 
+/*
+ * イベントタイルを消した瞬間、該当スロットが着弾する（デザイン仕様 05-K 共通）。
+ * scale 1.4 → 1。スロット側で拡縮し、中の .event-icon の呼吸パルスは止めない。
+ */
+.stack-slot {
+  display: grid;
+  place-items: center;
+  transform-origin: center;
+}
+
+.stack-slot.is-hit {
+  animation: stack-slot-hit 260ms cubic-bezier(0.2, 1.5, 0.35, 1) both;
+}
+
+@keyframes stack-slot-hit {
+  0% {
+    transform: scale(1.4);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 .stack-slot-empty {
   width: 48px;
   height: 48px;
@@ -1410,6 +1433,20 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .score-pop.is-fever .score-pop-amount {
     animation: none;
+  }
+
+  /* スロットの着弾は振幅を 1/4 に抑える（1.4 → 1.1） */
+  .stack-slot.is-hit {
+    animation-name: stack-slot-hit-weak;
+  }
+}
+
+@keyframes stack-slot-hit-weak {
+  0% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
   }
 }
 

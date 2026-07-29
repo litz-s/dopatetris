@@ -7,7 +7,21 @@ import type { ClearType, EventKind, MinoType, Rotation } from './types';
 export type GameEvent =
   | { readonly kind: 'pieceSpawned'; readonly type: MinoType; readonly hasEvent: boolean }
   | { readonly kind: 'pieceMoved' }
-  | { readonly kind: 'pieceRotated'; readonly kicked: boolean }
+  /**
+   * 回転した。描画側が 90ms かけて回転を見せるため、回転前の姿勢も渡す
+   * （デザイン仕様 05-H）。core 自身は即時に回転を確定させている。
+   */
+  | {
+      readonly kind: 'pieceRotated';
+      readonly kicked: boolean;
+      readonly type: MinoType;
+      /** 回転前の回転状態と位置 */
+      readonly fromRot: Rotation;
+      readonly fromX: number;
+      readonly fromY: number;
+      /** 回転の向き */
+      readonly dir: 'cw' | 'ccw';
+    }
   /** 固定された。着地スカッシュを描くため形状も渡す */
   | {
       readonly kind: 'pieceLocked';

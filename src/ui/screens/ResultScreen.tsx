@@ -99,9 +99,7 @@ export function ResultScreen({ result, onRetry, onMenu }: Props) {
             </div>
             <div className="result-fever">
               <span className="mono-8 muted">FEVER 合計</span>
-              <span className="result-fever-value">
-                {(result.feverTotalMs / 1000).toFixed(1)}s
-              </span>
+              <span className="result-fever-value">{(result.feverTotalMs / 1000).toFixed(1)}s</span>
             </div>
           </section>
 

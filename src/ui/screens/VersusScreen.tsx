@@ -78,7 +78,7 @@ export function VersusScreen({ room, settings, seed, timePressure, onExit, onLea
     [seed, timePressure, showAttack, room.sendTopOut, room.sendBoard, room.drainIncoming],
   );
 
-  const { hud, hype, paused, togglePause } = useGameEngine(
+  const { hud, hype, stackHit, paused, togglePause } = useGameEngine(
     { canvasRef, shakeRef, cabinetRef, cashRef },
     scale,
     settings,
@@ -118,7 +118,7 @@ export function VersusScreen({ room, settings, seed, timePressure, onExit, onLea
 
       <div className="plate plate-left">
         <HoldPanel hud={hud} />
-        <StackPanel hud={hud} />
+        <StackPanel hud={hud} stackHit={stackHit} />
         <KeyLog hud={hud} />
       </div>
 

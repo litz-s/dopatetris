@@ -23,6 +23,11 @@ function isIntegerBetween(value: unknown, min: number, max: number): value is nu
   return Number.isInteger(value) && Number(value) >= min && Number(value) <= max;
 }
 
+/** 版番号。未指定・不正はすべて 0（＝版違い）として扱う */
+function readVersion(value: unknown): number {
+  return isIntegerBetween(value, 0, 1_000_000) ? value : 0;
+}
+
 function isRoomRules(value: unknown): value is RoomRules {
   if (!isRecord(value)) return false;
   return (
@@ -60,11 +65,20 @@ export function parseClientMessage(raw: string): ClientMessage | null {
   if (!isRecord(value) || typeof value.kind !== 'string') return null;
 
   switch (value.kind) {
+    // version を持たない旧クライアントは 0 として通し、
+    // 握り潰さずに「版が違う」と返せるようにする
     case 'createRoom':
-      return typeof value.name === 'string' ? { kind: value.kind, name: value.name } : null;
+      return typeof value.name === 'string'
+        ? { kind: value.kind, name: value.name, version: readVersion(value.version) }
+        : null;
     case 'joinRoom':
       return typeof value.code === 'string' && typeof value.name === 'string'
-        ? { kind: value.kind, code: value.code, name: value.name }
+        ? {
+            kind: value.kind,
+            code: value.code,
+            name: value.name,
+            version: readVersion(value.version),
+          }
         : null;
     case 'leaveRoom':
     case 'returnToLobby':

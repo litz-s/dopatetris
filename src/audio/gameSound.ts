@@ -2,11 +2,20 @@
  * core が返す GameEvent を SoundCue へ変換する層。
  *
  * core は音の存在を知らず、ここが唯一の接続点になる。
- * 発火点はデザイン仕様（05 NOTES / SOUND HOOK）で確定済み:
+ * 発火点はデザイン仕様（06 NOTES / SOUND HOOK）で確定済み:
  *   移動 / 回転 / ソフト着地 / ハードドロップ / 各列ポップ（左→右で音程上昇）/
  *   爆発 / 重力着地 / フィーバー突入・終了 / コンボ加算（段階でピッチ+）
+ *
+ * 05 HYPE MOMENTS で 4列消しが「左からのポップ」ではなくなったため、
+ * 4列消しだけは列ポップを鳴らさず、チャージ→スイープ→圧縮の3段に合わせる。
+ * T-Spin も専用の一撃を持つ。
  */
-import { BOARD_WIDTH, LINE_CLEAR_COLUMN_DELAY_MS } from '@core/config/balance';
+import {
+  BOARD_WIDTH,
+  LINE_CLEAR_COLUMN_DELAY_MS,
+  TETRIS_CHARGE_MS,
+  TETRIS_WIPE_MS,
+} from '@core/config/balance';
 import type { GameEvent } from '@core/events';
 import type { AudioEngine } from './audioEngine';
 
@@ -46,18 +55,32 @@ export function playForEvents(engine: AudioEngine, events: readonly GameEvent[])
         break;
 
       case 'linesCleared': {
-        // 列ごとに 45ms ずらし、左→右で音程を上げていく
-        for (let x = 0; x < BOARD_WIDTH; x++) {
-          engine.play('clearPop', {
-            delayMs: x * LINE_CLEAR_COLUMN_DELAY_MS,
-            semitones: x * 2,
-            velocity: 0.55,
-          });
+        if (event.clearType.startsWith('tspin')) {
+          engine.play('tspin', { velocity: 0.9 });
         }
 
-        engine.play(event.rows.length >= 4 ? 'tetris' : 'lineClear', {
-          velocity: 0.8 + event.rows.length * 0.05,
-        });
+        if (event.rows.length >= 4) {
+          // 4列消しは左→右のポップをしないので、絵の3段に音を合わせる。
+          // チャージ 240ms → スイープ 200ms → 圧縮の着弾（05-I）
+          engine.play('tetrisCharge');
+          engine.play('tetrisSweep', { delayMs: TETRIS_CHARGE_MS });
+          engine.play('tetrisImpact', { delayMs: TETRIS_CHARGE_MS + TETRIS_WIPE_MS });
+          // ファンファーレは圧縮の着弾に重ねる
+          engine.play('tetris', {
+            delayMs: TETRIS_CHARGE_MS + TETRIS_WIPE_MS,
+            velocity: 1,
+          });
+        } else {
+          // 列ごとに 30ms ずらし、左→右で音程を上げていく
+          for (let x = 0; x < BOARD_WIDTH; x++) {
+            engine.play('clearPop', {
+              delayMs: x * LINE_CLEAR_COLUMN_DELAY_MS,
+              semitones: x * 2,
+              velocity: 0.55,
+            });
+          }
+          engine.play('lineClear', { velocity: 0.8 + event.rows.length * 0.05 });
+        }
 
         if (event.combo > 1) {
           engine.play('combo', {
