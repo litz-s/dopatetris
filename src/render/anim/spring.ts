@@ -52,3 +52,23 @@ export function easeOutExpo(t: number): number {
 export function clamp01(value: number): number {
   return value < 0 ? 0 : value > 1 ? 1 : value;
 }
+
+/** Continuous squash/stretch, pinned to the floor, with two diminishing rebounds. */
+export function jellyDeformation(
+  t: number,
+  compression: number,
+  impact: number,
+  cycles: number,
+  damping: number,
+): number {
+  const progress = clamp01(t);
+  if (progress === 0 || progress === 1) return 0;
+  if (progress < impact) return -compression * Math.sin(((progress / impact) * Math.PI) / 2);
+  const release = (progress - impact) / (1 - impact);
+  return (
+    -compression *
+    Math.cos(release * Math.PI * 2 * cycles) *
+    Math.exp(-damping * release) *
+    (1 - release)
+  );
+}

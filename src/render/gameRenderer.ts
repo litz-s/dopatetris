@@ -23,12 +23,14 @@ import {
 } from '@core/config/balance';
 import type { GameEvent } from '@core/events';
 import type { Cell, EventKind, GameState, MinoType, Rotation } from '@core/types';
-import { easeOutBack, clamp01 } from './anim/spring';
+import { easeOutBack, clamp01, jellyDeformation } from './anim/spring';
 import { drawBlock, drawClearingBlock, drawEventTile, drawGhostBlock } from './blocks';
+import { retroPopAtlas } from './assets/retroPopAtlas';
 import { ParticlePool } from './particles/pool';
 import { QualityManager, getEffectScale } from './quality/qualityProfiles';
 import {
   BEAT_MS,
+  CANDY_FX,
   BOMB,
   COMBO,
   EASING,
@@ -110,11 +112,6 @@ type Squash = {
   maxLife: number;
   /** ハードドロップなら強く潰す */
   strong: boolean;
-  /**
-   * 潰しの深さ。指定すると単純な scale へ切り替わる。
-   * T-Spin の「一瞬 .90 に潰れる」用。
-   */
-  depth?: number;
 };
 
 /**
@@ -228,6 +225,7 @@ export class GameRenderer {
 
   /** フィーバー中か（背景の脈動に使う） */
   private feverActive = false;
+  private feverSparkleMs = 0;
   /**
    * BGM の拍内位相 0-1。audio 層から毎フレーム渡される。
    * これを使うことで背景の脈動が曲のビートと完全に一致する。
@@ -240,6 +238,7 @@ export class GameRenderer {
     const context = canvas.getContext('2d', { alpha: false });
     if (context === null) return;
     this.ctx = context;
+    retroPopAtlas.load();
     this.shakeTarget = shakeTarget;
     this.resize(canvas);
   }
@@ -249,6 +248,8 @@ export class GameRenderer {
     if (this.shakeTarget !== null) this.shakeTarget.style.transform = '';
     this.shakeTarget = null;
     this.pool.clear();
+    this.feverActive = false;
+    this.feverSparkleMs = 0;
     this.shockwaves.length = 0;
     this.flashes.length = 0;
     this.shakeAmplitude = 0;
@@ -315,6 +316,7 @@ export class GameRenderer {
 
     const tier = this.quality.getTier();
     const profile = this.quality.getProfile();
+    this.pool.setLimit(profile.particleLimit);
 
     // スタック取得の演出位置を決めるため、このバッチで消えた行を先に拾っておく。
     // stackGained は linesCleared より先に飛んでくるので、後追いでは間に合わない。
@@ -341,16 +343,6 @@ export class GameRenderer {
           };
           this.punch(10, 160, 0, profile.shakeScale);
           this.emitTSpinShards(lockedCells, tier);
-
-          // T-Spin の着地は「一瞬 scale .90 に潰れる」だけ。
-          // ハードドロップ用の長いスカッシュに上書きされないよう差し替える。
-          this.squash = {
-            cells: lockedCells,
-            life: TSPIN.squashMs,
-            maxLife: TSPIN.squashMs,
-            strong: false,
-            depth: TSPIN.squashScale,
-          };
         }
         this.scheduleEventVfx(event.rows, state);
       }
@@ -408,8 +400,8 @@ export class GameRenderer {
           );
           this.squash = {
             cells,
-            life: HARD_DROP.squashMs,
-            maxLife: HARD_DROP.squashMs,
+            life: CANDY_FX.settleMs,
+            maxLife: CANDY_FX.settleMs,
             strong: event.hard,
           };
           this.emitLockSplash(event.type, event.rot, event.x, event.y, event.hard, tier);
@@ -419,6 +411,17 @@ export class GameRenderer {
           const shake = getClearShake(event.rows.length);
           this.punch(shake.amplitude, shake.durationMs, shake.rotationDeg, profile.shakeScale);
           this.emitLineClearDebris(event.rows, tier);
+          if (event.rows.length > 0)
+            this.emitCandy(
+              BOARD_PX_WIDTH / 2,
+              (event.rows.reduce((sum, row) => sum + row, 0) / event.rows.length +
+                0.5 -
+                BOARD_BUFFER_HEIGHT) *
+                GRID.cellPitch,
+              'candyPop',
+              this.getDiscoColor(event.combo),
+              0.7 + Math.min(0.6, event.rows.length * 0.12 + event.combo * 0.02),
+            );
 
           // 20コンボ以降は背景に集中線を1フレーム差し込む
           if (event.combo >= COMBO.blinkFrom && profile.flashScale > 0) {
@@ -440,6 +443,18 @@ export class GameRenderer {
             originX: BOMB.screenFlashOriginX,
             color: '#ffffff',
           });
+
+          if (event.rows.length > 0)
+            this.emitCandy(
+              BOARD_PX_WIDTH / 2,
+              (event.rows.reduce((sum, row) => sum + row, 0) / event.rows.length +
+                0.5 -
+                BOARD_BUFFER_HEIGHT) *
+                GRID.cellPitch,
+              'candyPop',
+              NEON.magenta,
+              1.3,
+            );
           this.emitBombScatter(event.rows, tier);
           break;
         }
@@ -480,6 +495,9 @@ export class GameRenderer {
           break;
         }
         case 'feverStarted': {
+          this.feverSparkleMs = 0;
+          this.emitCandy(BOARD_PX_WIDTH / 2, BOARD_PX_HEIGHT * 0.55, 'spinStars', '#ffffff', 1.5);
+          this.emitReward(BOARD_PX_WIDTH / 2, BOARD_PX_HEIGHT * 0.5, 15, 152, 620);
           this.punch(
             SHAKE.feverEnter.amplitude,
             SHAKE.feverEnter.durationMs,
@@ -507,6 +525,28 @@ export class GameRenderer {
     this.elapsedMs += deltaMs;
     this.pool.setLimit(this.quality.getProfile().particleLimit);
     this.pool.update(deltaMs);
+    if (this.feverActive) {
+      this.feverSparkleMs += deltaMs;
+      if (this.feverSparkleMs >= CANDY_FX.feverIntervalMs) {
+        this.feverSparkleMs %= CANDY_FX.feverIntervalMs;
+        this.emitCandy(
+          Math.random() < 0.5 ? 12 : BOARD_PX_WIDTH - 12,
+          BOARD_PX_HEIGHT * (0.15 + Math.random() * 0.8),
+          'feverSparkle',
+          '#ffffff',
+          0.35,
+        );
+        if (this.quality.getTier() === 'ULTRA' || this.quality.getTier() === 'HIGH') {
+          this.emitReward(
+            Math.random() < 0.5 ? 14 : BOARD_PX_WIDTH - 14,
+            BOARD_PX_HEIGHT - 20,
+            12,
+            16,
+            1000,
+          );
+        }
+      }
+    } else this.feverSparkleMs = 0;
 
     for (let i = this.shockwaves.length - 1; i >= 0; i--) {
       const wave = this.shockwaves[i];
@@ -627,7 +667,7 @@ export class GameRenderer {
     this.drawGhost(ctx, state);
     this.drawActive(ctx, state);
     this.drawOverlays(ctx);
-    this.pool.draw(ctx);
+    if (this.quality.getProfile().particleLimit > 0) this.pool.draw(ctx);
     this.drawShockwaves(ctx);
     this.drawGarbageWarning(ctx);
     this.drawFlashes(ctx);
@@ -1074,8 +1114,8 @@ export class GameRenderer {
       p.color = EVENT_COLORS.heart;
       p.gravity = -0.00002;
       p.drag = 1;
-      p.shape = 'glyph';
-      p.glyph = '♥';
+      p.shape = 'reward';
+      p.variant = 14;
       p.waver = spec.waverPx;
       p.waverPhase = Math.random() * Math.PI * 2;
     }
@@ -1151,8 +1191,8 @@ export class GameRenderer {
       p.gravity = 0.0002;
       p.drag = 0.9992;
       p.spin = (Math.PI * 2 * spec.swirlTurns) / spec.swirlMs;
-      p.shape = 'glyph';
-      p.glyph = '✦';
+      p.shape = 'reward';
+      p.variant = 13;
     }
   }
 
@@ -1207,47 +1247,26 @@ export class GameRenderer {
     ctx.restore();
   }
 
-  /** T-Spin の破片。6〜10片を全方位へ飛ばす */
+  /** T-Spin の白い星と収縮後に広がるリング。 */
   private emitTSpinShards(
     cells: readonly (readonly [number, number])[],
     tier: ReturnType<QualityManager['getTier']>,
   ): void {
-    if (this.quality.getProfile().particleLimit === 0) return;
-
-    const scale = getEffectScale('lockSplash', tier);
-    if (scale.count === 0) return;
-
-    let sumX = 0;
-    let sumY = 0;
-    for (const [x, y] of cells) {
-      sumX += x;
-      sumY += y;
+    let x = 0;
+    let y = 0;
+    for (const [cx, cy] of cells) {
+      x += cx;
+      y += cy;
     }
-    const cx = (sumX / cells.length + 0.5) * GRID.cellPitch;
-    const cy = (sumY / cells.length + 0.5 - BOARD_BUFFER_HEIGHT) * GRID.cellPitch;
-
-    const count =
-      TSPIN.shardMin + Math.floor(Math.random() * (TSPIN.shardMax - TSPIN.shardMin + 1));
-
-    for (let i = 0; i < count; i++) {
-      const p = this.pool.acquire();
-      if (p === null) return;
-      const angle = (Math.PI * 2 * i) / count + Math.random() * 0.3;
-      const velocity = 0.2 + Math.random() * 0.3;
-      p.x = cx;
-      p.y = cy;
-      p.vx = Math.cos(angle) * velocity;
-      p.vy = Math.sin(angle) * velocity;
-      p.maxLife = TSPIN.shardMs * scale.life;
-      p.life = p.maxLife;
-      p.size = GRID.cellBody * (0.12 + Math.random() * 0.12);
-      p.color = i % 2 === 0 ? '#ffffff' : TSPIN_FLASH_COLOR;
-      p.gravity = 0.0006;
-      p.drag = 0.997;
-      p.rotation = Math.random() * Math.PI;
-      p.spin = (Math.random() - 0.5) * 0.03;
-      p.shape = 'square';
-    }
+    const scale = getEffectScale('spinStars', tier);
+    if (scale.count === 0 || cells.length === 0) return;
+    this.emitCandy(
+      (x / cells.length + 0.5) * GRID.cellPitch,
+      (y / cells.length + 0.5 - BOARD_BUFFER_HEIGHT) * GRID.cellPitch,
+      'spinStars',
+      '#ffffff',
+      1.1,
+    );
   }
 
   /**
@@ -1488,34 +1507,17 @@ export class GameRenderer {
 
     const t = clamp01(1 - squash.life / squash.maxLife);
 
-    // T-Spin は「一瞬だけ縮む」ので、伸び返しのない単純な山にする
-    if (squash.depth !== undefined) {
-      const dip = Math.sin(t * Math.PI);
-      const s = 1 - (1 - squash.depth) * dip;
-      this.drawSquashCells(ctx, state, squash, s, s);
-      return;
-    }
-
-    const power = squash.strong ? 1 : 0.45;
-
-    // 3段階の折れ線で「潰れ → 伸び → 戻り」を作る
-    let scaleY: number;
-    let scaleX: number;
-    if (t < 0.32) {
-      const k = t / 0.32;
-      scaleY = 1 - (1 - HARD_DROP.squashY) * k * power;
-      scaleX = 1 + (HARD_DROP.squashX - 1) * k * power;
-    } else if (t < 0.68) {
-      const k = (t - 0.32) / 0.36;
-      scaleY = HARD_DROP.squashY + (1.1 - HARD_DROP.squashY) * k;
-      scaleY = 1 - (1 - scaleY) * power;
-      scaleX = HARD_DROP.squashX + (0.94 - HARD_DROP.squashX) * k;
-      scaleX = 1 + (scaleX - 1) * power;
-    } else {
-      const k = (t - 0.68) / 0.32;
-      scaleY = 1 + (1.1 - 1) * (1 - k) * power;
-      scaleX = 1 + (0.94 - 1) * (1 - k) * power;
-    }
+    const profile = this.quality.getProfile();
+    const power = (squash.strong ? 1 : 0.55) * profile.motionScale;
+    const deformation = jellyDeformation(
+      t,
+      CANDY_FX.compression * power,
+      CANDY_FX.compressUntil,
+      CANDY_FX.oscillations,
+      CANDY_FX.damping,
+    );
+    const scaleY = 1 + deformation;
+    const scaleX = 1 / Math.sqrt(scaleY);
 
     this.drawSquashCells(ctx, state, squash, scaleX, scaleY);
   }
@@ -1836,6 +1838,71 @@ export class GameRenderer {
     }
   }
 
+  /** Large fever emblem or small edge medal, still bounded by the existing pool. */
+  private emitReward(x: number, y: number, variant: number, size: number, life: number): void {
+    const profile = this.quality.getProfile();
+    if (profile.motionScale <= 0 || profile.particleLimit === 0) return;
+    const scale = getEffectScale(
+      variant === 12 ? 'feverMedal' : 'feverReward',
+      this.quality.getTier(),
+    );
+    if (scale.count === 0) return;
+    const p = this.pool.acquire();
+    if (p === null) return;
+    p.x = x;
+    p.y = y;
+    p.vx = 0;
+    p.vy = variant === 12 ? -0.08 * profile.motionScale : 0;
+    p.size = size * (0.65 + profile.motionScale * 0.35);
+    p.life = p.maxLife = life * scale.life;
+    p.color = NEON.yellow;
+    p.shape = 'reward';
+    p.variant = variant;
+  }
+
+  /** Retro comic burst, white pixel stars and chunky flat fragments. */
+  private emitCandy(
+    x: number,
+    y: number,
+    effect: 'candyPop' | 'spinStars' | 'feverSparkle',
+    color: string,
+    power: number,
+  ): void {
+    const profile = this.quality.getProfile();
+    const scale = getEffectScale(effect, this.quality.getTier());
+    const count = Math.round(scale.count * profile.motionScale);
+    if (count === 0 || profile.particleLimit === 0) return;
+    const stars = effect !== 'candyPop';
+    for (let i = 0; i < count; i++) {
+      const p = this.pool.acquire();
+      if (p === null) return;
+      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.25;
+      const speed = (0.08 + Math.random() * 0.3) * power;
+      p.x = x;
+      p.y = y;
+      p.vx = Math.cos(angle) * speed;
+      p.vy = Math.sin(angle) * speed - 0.12 * power;
+      p.maxLife =
+        (stars ? CANDY_FX.starMs : CANDY_FX.popMs) * scale.life * (0.7 + Math.random() * 0.3);
+      p.life = p.maxLife;
+      p.size = stars ? 8 + Math.random() * 18 : 6 + Math.random() * 12;
+      p.color = stars || i % 4 === 0 ? '#ffffff' : i % 2 === 0 ? color : NEON.yellow;
+      p.gravity = stars ? 0.00012 : 0.0007;
+      p.drag = 0.996;
+      p.rotation = Math.random() * Math.PI;
+      p.spin = (Math.random() - 0.5) * 0.006;
+      p.variant = i % 4;
+      p.shape = stars || i % 3 === 0 ? 'star' : 'square';
+      if (i === 0 && effect === 'candyPop') {
+        p.shape = 'burst';
+        p.vx = p.vy = p.gravity = 0;
+        p.size = 100 * power;
+        p.maxLife = p.life = CANDY_FX.burstMs * scale.life;
+        p.rotation = p.spin = 0;
+      }
+    }
+  }
+
   /**
    * 設置時のスプラッシュ。ミノの底面から横に大きく弾けさせる。
    * フィーバー中は数を増やし、虹色で散らす。
@@ -1879,7 +1946,17 @@ export class GameRenderer {
         p.drag = 0.9975;
         p.rotation = Math.random() * Math.PI;
         p.spin = (Math.random() - 0.5) * 0.03;
-        p.shape = 'square';
+        p.variant = i % 4;
+        p.shape = i % 4 === 0 ? 'star' : 'square';
+        if (i === 0) {
+          p.shape = 'splash';
+          p.variant = type === 'I' || type === 'J' ? 1 : type === 'O' ? 2 : type === 'S' ? 3 : 0;
+          p.x = px;
+          p.y = py - 10;
+          p.size = 40;
+          p.vx = p.vy = p.gravity = p.rotation = p.spin = 0;
+          p.maxLife = p.life = CANDY_FX.splashMs * scale.life;
+        }
       }
     }
   }

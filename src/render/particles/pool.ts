@@ -1,3 +1,4 @@
+import { retroPopAtlas } from '../assets/retroPopAtlas';
 /**
  * 固定長パーティクルプール。
  * ホットパスでオブジェクトを生成しないため、GC由来のフレーム落ちが起きない。
@@ -25,9 +26,11 @@ export type Particle = {
    * 'square' は四角、'spark' は伸びる線、
    * 'coin' は rotateY する円盤、'glyph' は記号（♥ / ✦ など）。
    */
-  shape: 'square' | 'spark' | 'coin' | 'glyph';
+  shape: 'square' | 'spark' | 'coin' | 'glyph' | 'star' | 'burst' | 'splash' | 'reward';
   /** shape が 'glyph' のときに描く文字 */
   glyph: string;
+  /** Atlas variation; reset on reuse. */
+  variant: number;
   /** 横方向の揺れ幅。ハートの蛇行に使う */
   waver: number;
   /** 揺れの位相 */
@@ -60,6 +63,7 @@ export class ParticlePool {
         spin: 0,
         shape: 'square',
         glyph: '',
+        variant: 0,
         waver: 0,
         waverPhase: 0,
       });
@@ -90,6 +94,7 @@ export class ParticlePool {
         // 呼び出し側が毎回すべて指定するとは限らないため。
         particle.shape = 'square';
         particle.glyph = '';
+        particle.variant = 0;
         particle.waver = 0;
         particle.waverPhase = 0;
         particle.rotation = 0;
@@ -140,15 +145,44 @@ export class ParticlePool {
       if (p === undefined || !p.alive) continue;
 
       const t = p.life / p.maxLife;
+      if (t > 1) continue;
       ctx.globalAlpha = t < 0.3 ? t / 0.3 : 1;
       ctx.fillStyle = p.color;
 
-      if (p.shape === 'coin') {
-        // rotateY を横幅の伸縮で表現する。真横を向いた瞬間に細くなる
-        const width = Math.max(1, Math.abs(Math.cos(p.rotation)) * p.size);
-        ctx.beginPath();
-        ctx.ellipse(p.x, p.y, width / 2, p.size / 2, 0, 0, Math.PI * 2);
-        ctx.fill();
+      if (
+        p.shape === 'star' ||
+        p.shape === 'burst' ||
+        p.shape === 'splash' ||
+        p.shape === 'reward' ||
+        p.shape === 'coin'
+      ) {
+        const age = 1 - t;
+        const index =
+          p.shape === 'star'
+            ? p.variant % 4
+            : p.shape === 'burst'
+              ? 4 + Math.min(3, Math.floor(age * 4))
+              : p.shape === 'splash'
+                ? 8 + (p.variant % 4)
+                : p.shape === 'coin'
+                  ? 12
+                  : p.variant;
+        const envelope =
+          p.shape === 'burst'
+            ? 0.55 + (1 - Math.pow(1 - age, 3)) * 0.7
+            : Math.min(1, age / 0.09) * Math.min(1, t / 0.35);
+        const size = p.size * envelope;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        if (p.shape === 'coin') ctx.scale(Math.max(0.1, Math.abs(Math.cos(p.rotation))), 1);
+        else ctx.rotate(p.rotation);
+        const drawn = retroPopAtlas.draw(ctx, index, size);
+        if (!drawn) {
+          // Deliberately simple pixel fallback while assets load or if loading fails.
+          ctx.fillRect(-size * 0.12, -size / 2, size * 0.24, size);
+          ctx.fillRect(-size / 2, -size * 0.12, size, size * 0.24);
+        }
+        ctx.restore();
       } else if (p.shape === 'glyph') {
         ctx.save();
         ctx.translate(p.x, p.y);
