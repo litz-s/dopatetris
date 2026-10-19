@@ -56,4 +56,34 @@ describe('reward effects budgets', () => {
     renderer.detach();
     expect(renderer.getParticleCount()).toBe(0);
   });
+
+  it('disables continuous fever blooms in LOW and at zero particle strength', () => {
+    const state = createGame(42);
+    state.fever.until = 100000;
+    for (const mode of ['LOW', 'zero'] as const) {
+      const renderer = new GameRenderer();
+      if (mode === 'LOW') renderer.quality.forceTier('LOW');
+      else renderer.quality.setSettings({ particleScale: 0 });
+      renderer.handleEvents([], state);
+      for (let frame = 0; frame < 120; frame++) renderer.update(16.667);
+      expect(renderer.getParticleCount()).toBe(0);
+    }
+  });
+
+  it('ends continuous fever particles after fever ends, and respects reduced motion', () => {
+    const state = createGame(42);
+    state.fever.until = 100000;
+    const normal = new GameRenderer();
+    const reduced = new GameRenderer();
+    reduced.quality.setReducedMotion(true);
+    for (const renderer of [normal, reduced]) {
+      renderer.handleEvents([], state);
+      for (let frame = 0; frame < 120; frame++) renderer.update(16.667);
+    }
+    expect(normal.getParticleCount()).toBeGreaterThan(0);
+    expect(reduced.getParticleCount()).toBeLessThan(normal.getParticleCount());
+    normal.handleEvents([], createGame(42));
+    normal.update(2000);
+    expect(normal.getParticleCount()).toBe(0);
+  });
 });

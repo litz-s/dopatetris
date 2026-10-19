@@ -45,7 +45,7 @@ function withPiece(
     ...state,
     active: { type, rot, x, y, eventCellIndex: null, eventKind: null },
     lastMoveWasRotation: false,
-    lastRotationKicked: false,
+    lastRotationKickIndex: null,
     lockTimerMs: null,
     lockResets: 0,
   };
@@ -231,6 +231,100 @@ describe('T-Spin', () => {
     expect(cleared?.kind === 'linesCleared' && cleared.clearType).toBe('double');
   });
 
+  it('空中で壁蹴りした後に落として2行消しても T-Spin Double にはならない', () => {
+    const base = emptyBoardState();
+    const board = cloneBoard(base.board);
+    // Forces SRS candidate 2 for 2 -> R, but leaves the subsequent drop unobstructed.
+    fill(board, 5, 5);
+    fill(board, 3, 19);
+    for (let x = 0; x < BOARD_WIDTH; x++) {
+      if (x !== 4 && x !== 5) fill(board, x, 20);
+      if (x !== 4) fill(board, x, 21);
+    }
+    const initial = withPiece({ ...base, board }, 'T', 2, 4, 5);
+    const rotated = step(initial, 0, [{ kind: 'rotate', dir: 'ccw' }]);
+    expect(rotated.state.active).toMatchObject({ x: 3, y: 5, rot: 1 });
+    expect(rotated.state.lastRotationKickIndex).toBe(1);
+    const result = step(rotated.state, 0, [{ kind: 'hardDrop' }]);
+    expect(result.events.find((e) => e.kind === 'hardDropped')).toMatchObject({ distance: 14 });
+    expect(result.events.find((e) => e.kind === 'linesCleared')).toMatchObject({
+      clearType: 'double',
+      rows: [20, 21],
+    });
+  });
+
+  it('回し込んだ後の移動失敗や0マスのマウス移動は成立を取り消さない', () => {
+    const rotated = step(tSpinDoubleState(), 0, [{ kind: 'rotate', dir: 'ccw' }]).state;
+    const result = step(rotated, 0, [
+      { kind: 'move', dx: -1 },
+      { kind: 'moveTo', column: 4 },
+      { kind: 'hardDrop' },
+    ]);
+    expect(result.events.find((e) => e.kind === 'hardDropped')).toMatchObject({ distance: 0 });
+    expect(result.events.find((e) => e.kind === 'linesCleared')).toMatchObject({
+      clearType: 'tspin-double',
+    });
+  });
+
+  it('通常の壁蹴りはMiniをフルT-Spinへ昇格させない', () => {
+    const base = emptyBoardState();
+    const board = cloneBoard(base.board);
+    fill(board, 6, 5);
+    for (let x = 0; x < BOARD_WIDTH; x++) if (x !== 5) fill(board, x, 7);
+    const initial = withPiece({ ...base, board }, 'T', 0, 3, 5);
+    const rotated = step(initial, 0, [{ kind: 'rotate', dir: 'ccw' }]).state;
+    expect(rotated.lastRotationKickIndex).toBe(1);
+    expect(rotated.active).toMatchObject({ x: 4, y: 5, rot: 3 });
+    const result = step(rotated, 0, [{ kind: 'hardDrop' }]);
+    expect(result.events.find((e) => e.kind === 'hardDropped')).toMatchObject({ distance: 0 });
+    expect(result.events.find((e) => e.kind === 'linesCleared')).toMatchObject({
+      clearType: 'tspin-mini',
+    });
+  });
+
+  it('5番目のSRS候補で回し込む例外はフルT-Spinになる', () => {
+    const base = emptyBoardState();
+    const board = cloneBoard(base.board);
+    for (const [x, y] of [
+      [4, 7],
+      [5, 5],
+      [6, 7],
+      [6, 9],
+      [5, 10],
+    ])
+      fill(board, x!, y!);
+    for (let x = 0; x < BOARD_WIDTH; x++) if (x !== 4 && x !== 5) fill(board, x, 8);
+    const initial = withPiece({ ...base, board }, 'T', 0, 3, 5);
+    const rotated = step(initial, 0, [{ kind: 'rotate', dir: 'ccw' }]).state;
+    expect(rotated.lastRotationKickIndex).toBe(4);
+    expect(rotated.active).toMatchObject({ x: 4, y: 7, rot: 3 });
+    const result = step(rotated, 0, [{ kind: 'hardDrop' }]);
+    expect(result.events.find((e) => e.kind === 'hardDropped')).toMatchObject({ distance: 0 });
+    expect(result.events.find((e) => e.kind === 'linesCleared')).toMatchObject({
+      clearType: 'tspin-single',
+    });
+  });
+
+  it('成功した横移動・自然落下・ソフトドロップは回転履歴を取り消す', () => {
+    const rotated = step(withPiece(emptyBoardState(), 'T', 0, 3, 5), 0, [
+      { kind: 'rotate', dir: 'cw' },
+    ]).state;
+    for (const command of [
+      { kind: 'move', dx: 1 },
+      { kind: 'moveTo', column: 7 },
+    ] as Command[]) {
+      expect(step(rotated, 0, [command]).state.lastMoveWasRotation).toBe(false);
+    }
+    expect(step(rotated, 1000).state.lastMoveWasRotation).toBe(false);
+    expect(step(rotated, 100, [{ kind: 'softDrop', active: true }]).state.lastMoveWasRotation).toBe(
+      false,
+    );
+    // Pressing soft drop without moving does not erase a rotation.
+    expect(step(rotated, 0, [{ kind: 'softDrop', active: true }]).state.lastMoveWasRotation).toBe(
+      true,
+    );
+  });
+
   it('T以外のミノでは T-Spin にならない', () => {
     const base = emptyBoardState();
     const board = cloneBoard(base.board);
@@ -322,5 +416,23 @@ describe('ロックディレイ', () => {
 
     const result = step(state, FIXED_TIMESTEP_MS, []);
     expect(result.state.lockTimerMs).toBeNull();
+  });
+
+  it('上限に達した後は段差から離れて戻っても猶予を復活させず固定する', () => {
+    const state = withPiece(emptyBoardState(), 'O', 0, 0, 18);
+    fill(state.board, 1, 20);
+    state.lockTimerMs = 10;
+    state.lockResets = MAX_LOCK_RESETS;
+    const off = step(state, 0, [{ kind: 'move', dx: 1 }]);
+    expect(off.events.some((e) => e.kind === 'pieceLocked')).toBe(false);
+    expect(off.state.lockTimerMs).toBeNull();
+    const back = step(off.state, 0, [{ kind: 'move', dx: -1 }]);
+    expect(back.events.filter((e) => e.kind === 'pieceLocked')).toHaveLength(1);
+  });
+
+  it('最後のリセットを接地したまま使い切ると同じステップで固定する', () => {
+    const state = { ...groundedState(), lockTimerMs: 100, lockResets: MAX_LOCK_RESETS - 1 };
+    const result = step(state, 0, [{ kind: 'move', dx: 1 }]);
+    expect(result.events.some((e) => e.kind === 'pieceLocked')).toBe(true);
   });
 });

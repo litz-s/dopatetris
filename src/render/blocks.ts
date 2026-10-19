@@ -218,15 +218,23 @@ export function drawClearingBlock(
   ctx.translate(-center, -center);
   drawBlock(ctx, 0, 0, size, color, { brightness });
   ctx.restore();
+}
 
-  // 白リングの拡散
-  if (progress > 0.1) {
-    const ringT = Math.min(1, (progress - 0.1) / 0.4);
-    const spread = size * 0.24 * ringT;
-    ctx.globalAlpha = Math.max(0, 1 - ringT);
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x - spread, y - spread, size + spread * 2, size + spread * 2);
-    ctx.globalAlpha = 1;
-  }
+/** An unrotated white afterimage expands independently of the shrinking block. */
+export function drawClearOutline(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  progress: number,
+  strength: number,
+): void {
+  if (progress < 0 || progress >= 1 || strength <= 0) return;
+  const spread = size * 0.5 * (1 - Math.pow(1 - progress, 3));
+  ctx.save();
+  ctx.globalAlpha = (1 - progress) * strength;
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 3 - progress * 2;
+  ctx.strokeRect(x - spread, y - spread, size + spread * 2, size + spread * 2);
+  ctx.restore();
 }
