@@ -505,5 +505,7 @@ export const CANDY_FX = {
   burstMs: 460,
   splashMs: 260,
   starMs: 820,
-  feverIntervalMs: 120,
+  feverIntervalMs: 90,
+  feverBloomSize: 56,
+  feverBloomMs: 260,
 } as const;

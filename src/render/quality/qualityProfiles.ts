@@ -112,6 +112,12 @@ export const QUALITY_PROFILES: Record<QualityTier, QualityProfile> = {
 export type EffectScale = { count: number; life: number };
 
 export const EFFECT_SCALES: Record<string, Record<QualityTier, EffectScale>> = {
+  feverBloom: {
+    ULTRA: { count: 2, life: 1 },
+    HIGH: { count: 1, life: 0.9 },
+    MID: { count: 1, life: 0.8 },
+    LOW: { count: 0, life: 0 },
+  },
   feverReward: {
     ULTRA: { count: 1, life: 1 },
     HIGH: { count: 1, life: 0.9 },

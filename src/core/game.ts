@@ -11,11 +11,11 @@ import {
   canPlace,
   collectEventsInRows,
   computeGravityMoves,
+  countGarbageOverflow,
   createEmptyBoard,
   findFullRows,
   getDropY,
   isBoardEmpty,
-  isFree,
   lockPiece,
   insertGarbage,
   removeBottomRows,
@@ -53,15 +53,8 @@ import { createRng } from './rng';
 import { computeClearBreakdown, isB2bEligible, resolveClearType } from './scoring';
 import { accumulateEvents, createEmptyStack, resolveTrigger } from './stack';
 import { drawNext, refillBag, spawnPiece } from './spawner';
-import type {
-  ActivePiece,
-  Board,
-  GameState,
-  GameStats,
-  PendingGarbage,
-  QueuedMino,
-  Rotation,
-} from './types';
+import { classifyTSpin } from './tSpin';
+import type { ActivePiece, Board, GameState, GameStats, PendingGarbage, QueuedMino } from './types';
 
 // ---------------------------------------------------------------- 初期化
 
@@ -111,7 +104,7 @@ export function createGame(seed: number, options: GameOptions = {}): GameState {
     gravity: null,
     softDropping: false,
     lastMoveWasRotation: false,
-    lastRotationKicked: false,
+    lastRotationKickIndex: null,
     timePressure: options.timePressure === true,
     pendingGarbage: [],
     rng,
@@ -195,6 +188,7 @@ function getHorizontalBounds(piece: ActivePiece): { min: number; max: number } {
 
 /** キューから次のミノを補充しつつ、盤面上部に出現させる */
 function spawnFromQueue(state: GameState, sink: EventSink): GameState {
+  if (state.status !== 'playing') return state;
   const head = state.next[0];
   if (head === undefined) return state;
 
@@ -229,7 +223,7 @@ function spawnFromQueue(state: GameState, sink: EventSink): GameState {
     lockTimerMs: null,
     lockResets: 0,
     lastMoveWasRotation: false,
-    lastRotationKicked: false,
+    lastRotationKickIndex: null,
   };
 }
 
@@ -257,75 +251,6 @@ function resetLockDelay(state: GameState): GameState {
   if (state.lockTimerMs === null) return state;
   if (state.lockResets >= MAX_LOCK_RESETS) return state;
   return { ...state, lockTimerMs: LOCK_DELAY_MS, lockResets: state.lockResets + 1 };
-}
-
-// ---------------------------------------------------------------- T-Spin 判定
-
-/**
- * T-Spin を判定する。
- * T ミノで、直前の操作が回転で、中心まわり4隅のうち3つ以上が塞がっていれば成立。
- * 前方2隅が塞がっていれば full、そうでなければ mini。
- */
-function detectTSpin(state: GameState, piece: ActivePiece): 'none' | 'mini' | 'full' {
-  if (piece.type !== 'T' || !state.lastMoveWasRotation) return 'none';
-
-  // T ミノの3x3ボックス中心
-  const cx = piece.x + 1;
-  const cy = piece.y + 1;
-
-  const corners: Record<Rotation, { front: [number, number][]; back: [number, number][] }> = {
-    0: {
-      front: [
-        [cx - 1, cy - 1],
-        [cx + 1, cy - 1],
-      ],
-      back: [
-        [cx - 1, cy + 1],
-        [cx + 1, cy + 1],
-      ],
-    },
-    1: {
-      front: [
-        [cx + 1, cy - 1],
-        [cx + 1, cy + 1],
-      ],
-      back: [
-        [cx - 1, cy - 1],
-        [cx - 1, cy + 1],
-      ],
-    },
-    2: {
-      front: [
-        [cx - 1, cy + 1],
-        [cx + 1, cy + 1],
-      ],
-      back: [
-        [cx - 1, cy - 1],
-        [cx + 1, cy - 1],
-      ],
-    },
-    3: {
-      front: [
-        [cx - 1, cy - 1],
-        [cx - 1, cy + 1],
-      ],
-      back: [
-        [cx + 1, cy - 1],
-        [cx + 1, cy + 1],
-      ],
-    },
-  };
-
-  const set = corners[piece.rot];
-  const blocked = (p: [number, number]): boolean => !isFree(state.board, p[0], p[1]);
-
-  const frontBlocked = set.front.filter(blocked).length;
-  const backBlocked = set.back.filter(blocked).length;
-
-  if (frontBlocked + backBlocked < 3) return 'none';
-  if (frontBlocked === 2) return 'full';
-  // キックで無理やり入れた場合は full 扱いにする（SRS の慣例）
-  return state.lastRotationKicked ? 'full' : 'mini';
 }
 
 // ---------------------------------------------------------------- ライン消去
@@ -507,16 +432,22 @@ function applyPendingGarbage(state: GameState, sink: EventSink): GameState {
   if (ready.length === 0) return state;
 
   let board = state.board;
+  let overflowed = false;
   for (const entry of ready) {
+    // Check before insertion discards the rows pushed above the hidden buffer.
+    if (countGarbageOverflow(board, entry.lines) > 0) overflowed = true;
     board = insertGarbage(board, entry.lines, entry.holeColumn);
     sink.emit({ kind: 'garbageApplied', lines: entry.lines, holeColumn: entry.holeColumn });
   }
 
-  return {
+  const applied: GameState = {
     ...state,
     board,
     pendingGarbage: state.pendingGarbage.filter((entry) => entry.readyAt > state.elapsedMs),
   };
+  if (!overflowed) return applied;
+  sink.emit({ kind: 'gameOver', score: state.score });
+  return { ...applied, status: 'over', active: null };
 }
 
 /** 重力の落下演出の終了処理。実際に盤面を落とし、連鎖したライン消去へ繋ぐ */
@@ -548,7 +479,12 @@ function lockAndAdvance(state: GameState, sink: EventSink, hard = false): GameSt
   const piece = state.active;
   if (piece === null) return state;
 
-  const tspin = detectTSpin(state, piece);
+  const tspin = classifyTSpin(
+    state.board,
+    piece,
+    state.lastMoveWasRotation,
+    state.lastRotationKickIndex,
+  );
   const board = lockPiece(state.board, piece);
   sink.emit({
     kind: 'pieceLocked',
@@ -699,6 +635,7 @@ function applyCommand(state: GameState, command: Command, sink: EventSink): Game
         ...state,
         active: { ...piece, x },
         lastMoveWasRotation: false,
+        lastRotationKickIndex: null,
       });
     }
 
@@ -727,6 +664,7 @@ function applyCommand(state: GameState, command: Command, sink: EventSink): Game
         ...state,
         active: { ...piece, x },
         lastMoveWasRotation: false,
+        lastRotationKickIndex: null,
       });
     }
 
@@ -757,7 +695,7 @@ function applyCommand(state: GameState, command: Command, sink: EventSink): Game
           ...state,
           active: { ...piece, rot: to, x, y },
           lastMoveWasRotation: true,
-          lastRotationKicked: i > 0,
+          lastRotationKickIndex: i,
         });
       }
       return state;
@@ -793,7 +731,9 @@ function applyCommand(state: GameState, command: Command, sink: EventSink): Game
         active: { ...piece, y },
         score: state.score + points,
         stats: addBreakdown(state.stats, 'lines', points),
-        // ハードドロップ後の回転は無いので T-Spin 判定は維持する
+        // 0マスの確定だけなら回転履歴を維持。実際の落下は移動なので無効化する。
+        lastMoveWasRotation: distance === 0 && state.lastMoveWasRotation,
+        lastRotationKickIndex: distance === 0 ? state.lastRotationKickIndex : null,
       };
       return lockAndAdvance(dropped, sink, true);
     }
@@ -848,6 +788,7 @@ function applyCommand(state: GameState, command: Command, sink: EventSink): Game
         lockTimerMs: null,
         lockResets: 0,
         lastMoveWasRotation: false,
+        lastRotationKickIndex: null,
       };
     }
 
@@ -933,7 +874,11 @@ export function step(
 
   for (const command of commands) {
     next = applyCommand(next, command, sink);
-    if (next.status !== 'playing') return { state: next, events: sink.drain() };
+    // A command can start an animation mid-batch. Apply the same input barrier
+    // as at the beginning of a step, before another command changes its board.
+    if (next.status !== 'playing' || next.clearing !== null || next.gravity !== null) {
+      return { state: next, events: sink.drain() };
+    }
   }
 
   if (next.active === null) return { state: next, events: sink.drain() };
@@ -958,6 +903,7 @@ export function step(
         ...next,
         active: { ...piece, y: piece.y + 1 },
         lastMoveWasRotation: false,
+        lastRotationKickIndex: null,
       };
       if (next.softDropping) {
         next = {
@@ -978,7 +924,8 @@ export function step(
   // ロックディレイの消化
   if (next.lockTimerMs !== null) {
     const remaining = next.lockTimerMs - deltaMs;
-    if (remaining <= 0) {
+    // Once all resets are used, lock on this contact (or the next one if airborne).
+    if (remaining <= 0 || next.lockResets >= MAX_LOCK_RESETS) {
       next = lockAndAdvance({ ...next, lockTimerMs: 0 }, sink);
     } else {
       next = { ...next, lockTimerMs: remaining };

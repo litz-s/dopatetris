@@ -24,9 +24,16 @@ import {
 import type { GameEvent } from '@core/events';
 import type { Cell, EventKind, GameState, MinoType, Rotation } from '@core/types';
 import { easeOutBack, clamp01, jellyDeformation } from './anim/spring';
-import { drawBlock, drawClearingBlock, drawEventTile, drawGhostBlock } from './blocks';
+import {
+  drawBlock,
+  drawClearingBlock,
+  drawClearOutline,
+  drawEventTile,
+  drawGhostBlock,
+} from './blocks';
 import { retroPopAtlas } from './assets/retroPopAtlas';
 import { ParticlePool } from './particles/pool';
+import { feverOrigin } from './feverOrigins';
 import { QualityManager, getEffectScale } from './quality/qualityProfiles';
 import {
   BEAT_MS,
@@ -226,6 +233,7 @@ export class GameRenderer {
   /** フィーバー中か（背景の脈動に使う） */
   private feverActive = false;
   private feverSparkleMs = 0;
+  private feverBurstIndex = 0;
   /**
    * BGM の拍内位相 0-1。audio 層から毎フレーム渡される。
    * これを使うことで背景の脈動が曲のビートと完全に一致する。
@@ -250,6 +258,7 @@ export class GameRenderer {
     this.pool.clear();
     this.feverActive = false;
     this.feverSparkleMs = 0;
+    this.feverBurstIndex = 0;
     this.shockwaves.length = 0;
     this.flashes.length = 0;
     this.shakeAmplitude = 0;
@@ -496,6 +505,7 @@ export class GameRenderer {
         }
         case 'feverStarted': {
           this.feverSparkleMs = 0;
+          this.feverBurstIndex = 0;
           this.emitCandy(BOARD_PX_WIDTH / 2, BOARD_PX_HEIGHT * 0.55, 'spinStars', '#ffffff', 1.5);
           this.emitReward(BOARD_PX_WIDTH / 2, BOARD_PX_HEIGHT * 0.5, 15, 152, 620);
           this.punch(
@@ -529,21 +539,15 @@ export class GameRenderer {
       this.feverSparkleMs += deltaMs;
       if (this.feverSparkleMs >= CANDY_FX.feverIntervalMs) {
         this.feverSparkleMs %= CANDY_FX.feverIntervalMs;
-        this.emitCandy(
-          Math.random() < 0.5 ? 12 : BOARD_PX_WIDTH - 12,
-          BOARD_PX_HEIGHT * (0.15 + Math.random() * 0.8),
-          'feverSparkle',
-          '#ffffff',
-          0.35,
-        );
-        if (this.quality.getTier() === 'ULTRA' || this.quality.getTier() === 'HIGH') {
-          this.emitReward(
-            Math.random() < 0.5 ? 14 : BOARD_PX_WIDTH - 14,
-            BOARD_PX_HEIGHT - 20,
-            12,
-            16,
-            1000,
-          );
+        const profile = this.quality.getProfile();
+        const blooms = getEffectScale('feverBloom', this.quality.getTier());
+        const count = Math.ceil(blooms.count * profile.motionScale);
+        for (let i = 0; i < count; i++) {
+          const origin = feverOrigin(this.feverBurstIndex++, Math.random(), Math.random());
+          const x = origin.x * BOARD_PX_WIDTH;
+          const y = origin.y * BOARD_PX_HEIGHT;
+          this.emitCandy(x, y, 'feverSparkle', '#ffffff', 0.65);
+          this.emitReward(x, y, 12, 18, 720);
         }
       }
     } else this.feverSparkleMs = 0;
@@ -668,6 +672,8 @@ export class GameRenderer {
     this.drawActive(ctx, state);
     this.drawOverlays(ctx);
     if (this.quality.getProfile().particleLimit > 0) this.pool.draw(ctx);
+    // Keep the clear's direction legible over the decorative comic bursts.
+    this.drawClearOutlines(ctx, state);
     this.drawShockwaves(ctx);
     this.drawGarbageWarning(ctx);
     this.drawFlashes(ctx);
@@ -845,6 +851,45 @@ export class GameRenderer {
 
         this.drawCell(ctx, px, py, cell, 'L1');
       }
+    }
+  }
+
+  /** White contours follow each cell's existing left-to-right clear schedule. */
+  private drawClearOutlines(ctx: CanvasRenderingContext2D, state: GameState): void {
+    const clearing = state.clearing;
+    const profile = this.quality.getProfile();
+    if (clearing === null || !profile.clearRing || profile.flashScale <= 0) return;
+    const elapsed = clearing.elapsedMs;
+    for (const row of clearing.rows) {
+      const py = (row - BOARD_BUFFER_HEIGHT) * GRID.cellPitch;
+      if (py < 0) continue;
+      for (let x = 0; x < BOARD_WIDTH; x++) {
+        const start =
+          clearing.rows.length >= 4
+            ? TETRIS_FX.chargeMs + (TETRIS_WIPE_PASS_MS[x] ?? 0)
+            : x * LINE_CLEAR_COLUMN_DELAY_MS;
+        drawClearOutline(
+          ctx,
+          x * GRID.cellPitch,
+          py,
+          GRID.cellBody,
+          (elapsed - start) /
+            Math.min(LINE_CLEAR_CELL_MS, getClearPopMs(clearing.rows.length) - start),
+          profile.flashScale,
+        );
+      }
+      // Four-line clears already have their own wider sweep.
+      if (clearing.rows.length >= 4) continue;
+      const front = (elapsed / LINE_CLEAR_COLUMN_DELAY_MS) * GRID.cellPitch;
+      if (front < 0 || front > BOARD_PX_WIDTH + GRID.cellPitch) continue;
+      const tail = GRID.cellPitch * 2;
+      const gradient = ctx.createLinearGradient(front - tail, 0, front, 0);
+      gradient.addColorStop(0, 'rgba(255,255,255,0)');
+      gradient.addColorStop(1, withAlpha('#ffffff', 0.8 * profile.flashScale));
+      ctx.fillStyle = gradient;
+      ctx.fillRect(front - tail, py, tail, GRID.cellBody);
+      ctx.fillStyle = withAlpha('#ffffff', profile.flashScale);
+      ctx.fillRect(front - 2, py, 2, GRID.cellBody);
     }
   }
 
@@ -1893,11 +1938,12 @@ export class GameRenderer {
       p.spin = (Math.random() - 0.5) * 0.006;
       p.variant = i % 4;
       p.shape = stars || i % 3 === 0 ? 'star' : 'square';
-      if (i === 0 && effect === 'candyPop') {
+      if (i === 0 && (effect === 'candyPop' || effect === 'feverSparkle')) {
         p.shape = 'burst';
         p.vx = p.vy = p.gravity = 0;
-        p.size = 100 * power;
-        p.maxLife = p.life = CANDY_FX.burstMs * scale.life;
+        p.size = effect === 'feverSparkle' ? CANDY_FX.feverBloomSize : 100 * power;
+        p.maxLife = p.life =
+          (effect === 'feverSparkle' ? CANDY_FX.feverBloomMs : CANDY_FX.burstMs) * scale.life;
         p.rotation = p.spin = 0;
       }
     }

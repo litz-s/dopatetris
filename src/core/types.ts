@@ -174,8 +174,8 @@ export type GameState = {
   softDropping: boolean;
   /** 直前の操作が回転だったか（T-Spin判定に使う） */
   lastMoveWasRotation: boolean;
-  /** 直前の回転でキックが発生したか（T-Spin mini判定に使う） */
-  lastRotationKicked: boolean;
+  /** 直前のSRS回転で成功した候補番号（0〜4）。回転履歴がなければnull */
+  lastRotationKickIndex: number | null;
 
   /**
    * 時間経過だけでもレベルが上がるか。対戦のサバイバル用。
