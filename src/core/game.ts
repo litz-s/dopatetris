@@ -39,12 +39,10 @@ import {
   MAX_DROP_CELLS_PER_STEP,
   MAX_SOFT_DROP_CELLS_PER_STEP,
   MAX_LOCK_RESETS,
-  SOFT_DROP_INTERVAL_MS,
   TIME_PRESSURE_INTERVAL_MS,
   NEXT_COUNT,
   SCORE_TABLE,
-  SOFT_DROP_FAST_GRAVITY_MULTIPLIER,
-  FIXED_TIMESTEP_MS,
+  SOFT_DROP_MULTIPLIER,
   SOFT_DROP_POINT,
   STACK_COOLDOWN_MS,
 } from './config/balance';
@@ -158,16 +156,8 @@ function getDropIntervalMs(state: GameState): number {
   const index = Math.min(getEffectiveLevel(state) - 1, GRAVITY_TABLE_MS.length - 1);
   const base = GRAVITY_TABLE_MS[Math.max(0, index)] ?? 1000;
 
-  if (state.softDropping) {
-    // Account for the natural-fall cap, rather than multiplying a 1ms table entry
-    // that the fixed-step simulation cannot actually reach. Coin slow is bypassed.
-    const effectiveNaturalInterval = Math.max(base, FIXED_TIMESTEP_MS / MAX_DROP_CELLS_PER_STEP);
-    return Math.min(
-      SOFT_DROP_INTERVAL_MS,
-      effectiveNaturalInterval / SOFT_DROP_FAST_GRAVITY_MULTIPLIER,
-    );
-  }
-  return isSlowActive(state) ? base / (1 - state.slow.rate) : base;
+  const naturalInterval = isSlowActive(state) ? base / (1 - state.slow.rate) : base;
+  return state.softDropping ? naturalInterval / SOFT_DROP_MULTIPLIER : naturalInterval;
 }
 
 function isFeverActive(state: GameState): boolean {

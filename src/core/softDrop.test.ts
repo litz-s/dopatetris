@@ -25,55 +25,66 @@ function frames(state: GameState, count: number, soft = true) {
 }
 
 describe('ソフトドロップのテンポ', () => {
-  it.each([1, 5, 12])('レベル%iでも通常は100msで5マス、400msで20マス', (level) => {
-    expect(frames(falling(level), 6).state.active?.y).toBe(5);
-    const landed = frames(falling(level), 24);
+  it('初期速度で20マスを約1秒かけて降り、着地後にも操作猶予を残す', () => {
+    expect(frames(falling(1), 30).state.active?.y).toBe(10);
+    const landed = frames(falling(1), 60);
     expect(landed.state.active?.y).toBe(20);
     expect(landed.dropped).toBe(20);
     expect(landed.state.score).toBe(20);
     expect(landed.locked).toBe(false);
     expect(landed.state.lockTimerMs).toBeGreaterThan(450);
-    expect(frames(falling(level), 1).state.active?.y).toBeLessThan(20);
   });
 
-  it('マルチの時間経過だけでは基準速度が変わらない', () => {
-    const timed = { ...falling(1), timePressure: true, elapsedMs: TIME_PRESSURE_INTERVAL_MS * 10 };
-    expect(frames(timed, 6).state.active?.y).toBe(5);
+  it.each([
+    [1, 6, 2],
+    [5, 6, 5],
+    [10, 1, 5],
+  ])('レベル%iの自然落下間隔に同じ20倍を掛ける', (level, count, cells) => {
+    expect(frames(falling(level!), count!).state.active?.y).toBe(cells);
   });
 
-  it.each([1, 12, 13, 21])('レベル%iでもコインの減速はソフトに影響しない', (level) => {
-    const normal = falling(level);
-    const slowed = { ...normal, slow: { until: 1e9, rate: 0.75 } };
-    expect(frames(slowed, 6).state.active?.y).toBe(frames(normal, 6).state.active?.y);
+  it('マルチの時間加速でも同じ実効レベルの速度へ連動する', () => {
+    const timed = { ...falling(1), timePressure: true, elapsedMs: TIME_PRESSURE_INTERVAL_MS * 4 };
+    expect(frames(timed, 6).state.active?.y).toBe(frames(falling(5), 6).state.active?.y);
+    expect(frames(timed, 6).state.active?.y).toBeGreaterThan(frames(falling(1), 6).state.active!.y);
   });
 
-  it('高レベルでは自然落下より速く、最高速でも共通上限に詰まらない', () => {
-    for (const level of [13, 14, 15, 21]) {
-      const soft = frames(falling(level), 6).state;
-      const natural = frames(falling(level), 6, false).state;
-      expect(soft.active!.y).toBeGreaterThan(natural.active!.y);
-    }
-    // Seven frames: 14 natural cells vs floor(14 * 1.25) = 17 soft cells.
-    expect(frames(falling(21), 7).state.active?.y).toBe(17);
-    expect(frames(falling(21), 7, false).state.active?.y).toBe(14);
+  it.each([
+    [1, 6, 2, 1],
+    [5, 6, 5, 2],
+    [13, 1, 18, 9],
+  ])('レベル%iでコインの減速後の自然落下速度へ20倍を掛ける', (level, count, cells, slowedCells) => {
+    const normal = falling(level!);
+    const slowed = { ...normal, slow: { until: 1e9, rate: 0.5 } };
+    expect(frames(normal, count!).state.active?.y).toBe(cells);
+    expect(frames(slowed, count!).state.active?.y).toBe(slowedCells);
   });
 
-  it('基準速度を超える時間加速でも自然落下より速くする', () => {
-    const fastest = {
-      ...falling(1),
-      timePressure: true,
-      elapsedMs: TIME_PRESSURE_INTERVAL_MS * 30,
-    };
-    expect(frames(fastest, 7).state.active?.y).toBe(17);
+  it('最高速でも共通上限に詰まらず着地できるが、ハードドロップのように即固定しない', () => {
+    const soft = frames(falling(21), 1);
+    expect(soft.state.active?.y).toBe(20);
+    expect(soft.dropped).toBe(20);
+    expect(soft.locked).toBe(false);
+    expect(soft.state.lockTimerMs).toBeGreaterThan(450);
+    expect(frames(falling(21), 1, false).state.active?.y).toBe(2);
+  });
+
+  it('高速でも途中のブロックをすり抜けず、実際に降りた分だけ加点する', () => {
+    const state = falling(21);
+    for (let x = 3; x < 7; x++) state.board[10]![x] = { color: 'J', event: null };
+    const landed = frames(state, 1);
+    expect(landed.state.active?.y).toBe(8);
+    expect(landed.state.score).toBe(8);
+    expect(landed.locked).toBe(false);
   });
 
   it.each([1, 21])('レベル%iで離すと溜まった時間を捨てて自然落下へ戻る', (level) => {
-    const soft = frames(falling(level), 6).state;
-    const released = step(soft, 0, [{ kind: 'softDrop', active: false }]).state;
+    const state = { ...falling(level), softDropping: true, dropTimerMs: 100 };
+    const released = step(state, 0, [{ kind: 'softDrop', active: false }]).state;
     expect(released.dropTimerMs).toBe(0);
     const natural = step(released, FIXED_TIMESTEP_MS);
-    expect(natural.state.active!.y - released.active!.y).toBe(level === 1 ? 0 : 2);
-    expect(natural.state.score).toBe(soft.score);
+    expect(natural.state.active!.y).toBe(level === 1 ? 0 : 2);
+    expect(natural.state.score).toBe(0);
     expect(natural.events.some((e) => e.kind === 'softDropped')).toBe(false);
   });
 });
