@@ -502,6 +502,8 @@ export const CANDY_FX = {
   oscillations: 2.25,
   damping: 4.5,
   popMs: 620,
+  burstMs: 460,
+  splashMs: 260,
   starMs: 820,
   feverIntervalMs: 120,
 } as const;

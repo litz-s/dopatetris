@@ -25,6 +25,7 @@ import type { GameEvent } from '@core/events';
 import type { Cell, EventKind, GameState, MinoType, Rotation } from '@core/types';
 import { easeOutBack, clamp01, jellyDeformation } from './anim/spring';
 import { drawBlock, drawClearingBlock, drawEventTile, drawGhostBlock } from './blocks';
+import { retroPopAtlas } from './assets/retroPopAtlas';
 import { ParticlePool } from './particles/pool';
 import { QualityManager, getEffectScale } from './quality/qualityProfiles';
 import {
@@ -237,6 +238,7 @@ export class GameRenderer {
     const context = canvas.getContext('2d', { alpha: false });
     if (context === null) return;
     this.ctx = context;
+    retroPopAtlas.load();
     this.shakeTarget = shakeTarget;
     this.resize(canvas);
   }
@@ -409,15 +411,17 @@ export class GameRenderer {
           const shake = getClearShake(event.rows.length);
           this.punch(shake.amplitude, shake.durationMs, shake.rotationDeg, profile.shakeScale);
           this.emitLineClearDebris(event.rows, tier);
-          for (const row of event.rows) {
+          if (event.rows.length > 0)
             this.emitCandy(
               BOARD_PX_WIDTH / 2,
-              (row + 0.5 - BOARD_BUFFER_HEIGHT) * GRID.cellPitch,
+              (event.rows.reduce((sum, row) => sum + row, 0) / event.rows.length +
+                0.5 -
+                BOARD_BUFFER_HEIGHT) *
+                GRID.cellPitch,
               'candyPop',
               this.getDiscoColor(event.combo),
-              0.7 + Math.min(0.6, event.combo * 0.04),
+              0.7 + Math.min(0.6, event.rows.length * 0.12 + event.combo * 0.02),
             );
-          }
 
           // 20コンボ以降は背景に集中線を1フレーム差し込む
           if (event.combo >= COMBO.blinkFrom && profile.flashScale > 0) {
@@ -439,16 +443,19 @@ export class GameRenderer {
             originX: BOMB.screenFlashOriginX,
             color: '#ffffff',
           });
-          this.emitBombScatter(event.rows, tier);
-          for (const row of event.rows) {
+
+          if (event.rows.length > 0)
             this.emitCandy(
               BOARD_PX_WIDTH / 2,
-              (row + 0.5 - BOARD_BUFFER_HEIGHT) * GRID.cellPitch,
+              (event.rows.reduce((sum, row) => sum + row, 0) / event.rows.length +
+                0.5 -
+                BOARD_BUFFER_HEIGHT) *
+                GRID.cellPitch,
               'candyPop',
               NEON.magenta,
               1.3,
             );
-          }
+          this.emitBombScatter(event.rows, tier);
           break;
         }
         case 'stackGained': {
@@ -490,6 +497,7 @@ export class GameRenderer {
         case 'feverStarted': {
           this.feverSparkleMs = 0;
           this.emitCandy(BOARD_PX_WIDTH / 2, BOARD_PX_HEIGHT * 0.55, 'spinStars', '#ffffff', 1.5);
+          this.emitReward(BOARD_PX_WIDTH / 2, BOARD_PX_HEIGHT * 0.5, 15, 152, 620);
           this.punch(
             SHAKE.feverEnter.amplitude,
             SHAKE.feverEnter.durationMs,
@@ -528,6 +536,15 @@ export class GameRenderer {
           '#ffffff',
           0.35,
         );
+        if (this.quality.getTier() === 'ULTRA' || this.quality.getTier() === 'HIGH') {
+          this.emitReward(
+            Math.random() < 0.5 ? 14 : BOARD_PX_WIDTH - 14,
+            BOARD_PX_HEIGHT - 20,
+            12,
+            16,
+            1000,
+          );
+        }
       }
     } else this.feverSparkleMs = 0;
 
@@ -650,7 +667,7 @@ export class GameRenderer {
     this.drawGhost(ctx, state);
     this.drawActive(ctx, state);
     this.drawOverlays(ctx);
-    this.pool.draw(ctx);
+    if (this.quality.getProfile().particleLimit > 0) this.pool.draw(ctx);
     this.drawShockwaves(ctx);
     this.drawGarbageWarning(ctx);
     this.drawFlashes(ctx);
@@ -666,31 +683,6 @@ export class GameRenderer {
     if (this.feverActive) {
       const flash = this.quality.getProfile().flashScale;
       const pulse = 0.5 - 0.5 * Math.cos(this.beatPhase * Math.PI * 2);
-
-      const motion = this.quality.getProfile().motionScale;
-      if (motion > 0) {
-        ctx.save();
-        ctx.globalCompositeOperation = 'lighter';
-        for (let i = 0; i < 6; i++) {
-          const angle =
-            -Math.PI + (i / 5) * Math.PI + Math.sin(this.elapsedMs / 1400) * 0.16 * motion;
-          ctx.globalAlpha = (0.025 + pulse * 0.04) * flash * motion;
-          ctx.fillStyle = this.getDiscoColor(i);
-          ctx.beginPath();
-          ctx.moveTo(BOARD_PX_WIDTH / 2, BOARD_PX_HEIGHT);
-          ctx.lineTo(
-            BOARD_PX_WIDTH / 2 + Math.cos(angle - 0.05) * BOARD_PX_HEIGHT * 1.3,
-            BOARD_PX_HEIGHT + Math.sin(angle - 0.05) * BOARD_PX_HEIGHT * 1.3,
-          );
-          ctx.lineTo(
-            BOARD_PX_WIDTH / 2 + Math.cos(angle + 0.05) * BOARD_PX_HEIGHT * 1.3,
-            BOARD_PX_HEIGHT + Math.sin(angle + 0.05) * BOARD_PX_HEIGHT * 1.3,
-          );
-          ctx.closePath();
-          ctx.fill();
-        }
-        ctx.restore();
-      }
 
       // 主照明
       ctx.fillStyle = withAlpha(this.getDiscoColor(0), (0.1 + pulse * 0.22) * flash);
@@ -1122,8 +1114,8 @@ export class GameRenderer {
       p.color = EVENT_COLORS.heart;
       p.gravity = -0.00002;
       p.drag = 1;
-      p.shape = 'glyph';
-      p.glyph = '♥';
+      p.shape = 'reward';
+      p.variant = 14;
       p.waver = spec.waverPx;
       p.waverPhase = Math.random() * Math.PI * 2;
     }
@@ -1199,8 +1191,8 @@ export class GameRenderer {
       p.gravity = 0.0002;
       p.drag = 0.9992;
       p.spin = (Math.PI * 2 * spec.swirlTurns) / spec.swirlMs;
-      p.shape = 'glyph';
-      p.glyph = '✦';
+      p.shape = 'reward';
+      p.variant = 13;
     }
   }
 
@@ -1846,7 +1838,29 @@ export class GameRenderer {
     }
   }
 
-  /** Localized pop: glossy candy, sharp sparkles and expanding outline rings. */
+  /** Large fever emblem or small edge medal, still bounded by the existing pool. */
+  private emitReward(x: number, y: number, variant: number, size: number, life: number): void {
+    const profile = this.quality.getProfile();
+    if (profile.motionScale <= 0 || profile.particleLimit === 0) return;
+    const scale = getEffectScale(
+      variant === 12 ? 'feverMedal' : 'feverReward',
+      this.quality.getTier(),
+    );
+    if (scale.count === 0) return;
+    const p = this.pool.acquire();
+    if (p === null) return;
+    p.x = x;
+    p.y = y;
+    p.vx = 0;
+    p.vy = variant === 12 ? -0.08 * profile.motionScale : 0;
+    p.size = size * (0.65 + profile.motionScale * 0.35);
+    p.life = p.maxLife = life * scale.life;
+    p.color = NEON.yellow;
+    p.shape = 'reward';
+    p.variant = variant;
+  }
+
+  /** Retro comic burst, white pixel stars and chunky flat fragments. */
   private emitCandy(
     x: number,
     y: number,
@@ -1877,11 +1891,14 @@ export class GameRenderer {
       p.drag = 0.996;
       p.rotation = Math.random() * Math.PI;
       p.spin = (Math.random() - 0.5) * 0.006;
-      p.shape =
-        i < 2 && effect !== 'feverSparkle' ? 'ring' : stars || i % 3 === 0 ? 'star' : 'bubble';
-      if (p.shape === 'ring') {
+      p.variant = i % 4;
+      p.shape = stars || i % 3 === 0 ? 'star' : 'square';
+      if (i === 0 && effect === 'candyPop') {
+        p.shape = 'burst';
         p.vx = p.vy = p.gravity = 0;
-        p.size = stars ? 36 : 26;
+        p.size = 100 * power;
+        p.maxLife = p.life = CANDY_FX.burstMs * scale.life;
+        p.rotation = p.spin = 0;
       }
     }
   }
@@ -1929,7 +1946,17 @@ export class GameRenderer {
         p.drag = 0.9975;
         p.rotation = Math.random() * Math.PI;
         p.spin = (Math.random() - 0.5) * 0.03;
-        p.shape = i % 3 === 0 ? 'star' : 'bubble';
+        p.variant = i % 4;
+        p.shape = i % 4 === 0 ? 'star' : 'square';
+        if (i === 0) {
+          p.shape = 'splash';
+          p.variant = type === 'I' || type === 'J' ? 1 : type === 'O' ? 2 : type === 'S' ? 3 : 0;
+          p.x = px;
+          p.y = py - 10;
+          p.size = 40;
+          p.vx = p.vy = p.gravity = p.rotation = p.spin = 0;
+          p.maxLife = p.life = CANDY_FX.splashMs * scale.life;
+        }
       }
     }
   }
