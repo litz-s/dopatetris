@@ -25,7 +25,7 @@ export type Particle = {
    * 'square' は四角、'spark' は伸びる線、
    * 'coin' は rotateY する円盤、'glyph' は記号（♥ / ✦ など）。
    */
-  shape: 'square' | 'spark' | 'coin' | 'glyph';
+  shape: 'square' | 'spark' | 'coin' | 'glyph' | 'star' | 'bubble' | 'ring';
   /** shape が 'glyph' のときに描く文字 */
   glyph: string;
   /** 横方向の揺れ幅。ハートの蛇行に使う */
@@ -143,7 +143,44 @@ export class ParticlePool {
       ctx.globalAlpha = t < 0.3 ? t / 0.3 : 1;
       ctx.fillStyle = p.color;
 
-      if (p.shape === 'coin') {
+      if (p.shape === 'star' || p.shape === 'bubble' || p.shape === 'ring') {
+        const age = 1 - t;
+        const envelope = Math.min(1, age / 0.08) * Math.min(1, t / 0.4);
+        const radius = (p.size * (p.shape === 'ring' ? 0.3 + age * 3 : envelope)) / 2;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation);
+        ctx.beginPath();
+        if (p.shape === 'star') {
+          // Font-independent, sharp white four-point sparkle.
+          for (let point = 0; point < 8; point++) {
+            const angle = (point * Math.PI) / 4;
+            const r = radius * (point % 2 === 0 ? 1 : 0.22);
+            const x = Math.cos(angle) * r;
+            const y = Math.sin(angle) * r;
+            if (point === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          ctx.arc(0, 0, radius, 0, Math.PI * 2);
+          if (p.shape === 'ring') {
+            ctx.globalAlpha *= t;
+            ctx.strokeStyle = p.color;
+            ctx.lineWidth = Math.max(0.5, 3 * t);
+            ctx.stroke();
+          } else {
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.globalAlpha *= 0.65;
+            ctx.beginPath();
+            ctx.arc(-radius * 0.28, -radius * 0.3, radius * 0.25, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.restore();
+      } else if (p.shape === 'coin') {
         // rotateY を横幅の伸縮で表現する。真横を向いた瞬間に細くなる
         const width = Math.max(1, Math.abs(Math.cos(p.rotation)) * p.size);
         ctx.beginPath();

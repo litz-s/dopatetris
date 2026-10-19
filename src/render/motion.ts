@@ -493,3 +493,15 @@ export type SoundCue =
   | 'feverEnd'
   /** コンボ加算。段階でピッチが上がる */
   | 'combo';
+
+/** Candy feedback: short impact, elastic return, longer sparkling afterglow. */
+export const CANDY_FX = {
+  settleMs: 420,
+  compression: 0.32,
+  compressUntil: 0.12,
+  oscillations: 2.25,
+  damping: 4.5,
+  popMs: 620,
+  starMs: 820,
+  feverIntervalMs: 120,
+} as const;

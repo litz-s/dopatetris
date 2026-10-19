@@ -44,6 +44,8 @@ export const DEFAULT_EFFECT_SETTINGS: EffectSettings = {
 };
 
 export type QualityProfile = {
+  /** Elastic deformation; independent of camera shake. */
+  motionScale: number;
   /** パーティクル同時数の上限 */
   particleLimit: number;
   /** 画面揺れの倍率 */
@@ -62,6 +64,7 @@ export type QualityProfile = {
 
 export const QUALITY_PROFILES: Record<QualityTier, QualityProfile> = {
   ULTRA: {
+    motionScale: 1,
     particleLimit: 420,
     shakeScale: 1,
     flashScale: 1,
@@ -71,6 +74,7 @@ export const QUALITY_PROFILES: Record<QualityTier, QualityProfile> = {
     backgroundIntervalMs: 1000 / 60,
   },
   HIGH: {
+    motionScale: 0.85,
     particleLimit: 260,
     shakeScale: 0.85,
     flashScale: 0.85,
@@ -80,6 +84,7 @@ export const QUALITY_PROFILES: Record<QualityTier, QualityProfile> = {
     backgroundIntervalMs: 1000 / 60,
   },
   MID: {
+    motionScale: 0.55,
     particleLimit: 120,
     shakeScale: 0.6,
     flashScale: 0.6,
@@ -89,6 +94,7 @@ export const QUALITY_PROFILES: Record<QualityTier, QualityProfile> = {
     backgroundIntervalMs: 1000 / 30,
   },
   LOW: {
+    motionScale: 0,
     particleLimit: 0,
     shakeScale: 0,
     flashScale: 0.3,
@@ -106,6 +112,24 @@ export const QUALITY_PROFILES: Record<QualityTier, QualityProfile> = {
 export type EffectScale = { count: number; life: number };
 
 export const EFFECT_SCALES: Record<string, Record<QualityTier, EffectScale>> = {
+  candyPop: {
+    ULTRA: { count: 24, life: 1 },
+    HIGH: { count: 16, life: 0.9 },
+    MID: { count: 8, life: 0.8 },
+    LOW: { count: 0, life: 0 },
+  },
+  spinStars: {
+    ULTRA: { count: 28, life: 1 },
+    HIGH: { count: 18, life: 0.9 },
+    MID: { count: 8, life: 0.8 },
+    LOW: { count: 0, life: 0 },
+  },
+  feverSparkle: {
+    ULTRA: { count: 4, life: 1 },
+    HIGH: { count: 3, life: 0.9 },
+    MID: { count: 1, life: 0.8 },
+    LOW: { count: 0, life: 0 },
+  },
   /** B: ハードドロップ着地の破片 5〜9個 */
   hardDropDebris: {
     ULTRA: { count: 12, life: 1 },
@@ -225,7 +249,8 @@ export class QualityManager {
 
     return {
       ...base,
-      particleLimit: Math.round(base.particleLimit * particleScale),
+      particleLimit: Math.round(base.particleLimit * particleScale * motionScale),
+      motionScale: base.motionScale * Math.min(1, this.settings.particleScale) * motionScale,
       shakeScale: base.shakeScale * this.settings.shakeScale * motionScale,
       flashScale: base.flashScale * this.settings.flashScale * motionScale,
       scanSweep: base.scanSweep && this.settings.scanline !== 'off',
