@@ -37,12 +37,14 @@ import {
   getClearDelayMs,
   LOCK_DELAY_MS,
   MAX_DROP_CELLS_PER_STEP,
+  MAX_SOFT_DROP_CELLS_PER_STEP,
   MAX_LOCK_RESETS,
-  SOFT_DROP_MIN_INTERVAL_MS,
+  SOFT_DROP_INTERVAL_MS,
   TIME_PRESSURE_INTERVAL_MS,
   NEXT_COUNT,
   SCORE_TABLE,
-  SOFT_DROP_MULTIPLIER,
+  SOFT_DROP_FAST_GRAVITY_MULTIPLIER,
+  FIXED_TIMESTEP_MS,
   SOFT_DROP_POINT,
   STACK_COOLDOWN_MS,
 } from './config/balance';
@@ -156,11 +158,16 @@ function getDropIntervalMs(state: GameState): number {
   const index = Math.min(getEffectiveLevel(state) - 1, GRAVITY_TABLE_MS.length - 1);
   const base = GRAVITY_TABLE_MS[Math.max(0, index)] ?? 1000;
 
-  const slowed = isSlowActive(state) ? base / (1 - state.slow.rate) : base;
-  if (!state.softDropping) return slowed;
-
-  // 自然落下より遅くはならず、下限より速くもならないようにする
-  return Math.min(slowed, Math.max(SOFT_DROP_MIN_INTERVAL_MS, slowed / SOFT_DROP_MULTIPLIER));
+  if (state.softDropping) {
+    // Account for the natural-fall cap, rather than multiplying a 1ms table entry
+    // that the fixed-step simulation cannot actually reach. Coin slow is bypassed.
+    const effectiveNaturalInterval = Math.max(base, FIXED_TIMESTEP_MS / MAX_DROP_CELLS_PER_STEP);
+    return Math.min(
+      SOFT_DROP_INTERVAL_MS,
+      effectiveNaturalInterval / SOFT_DROP_FAST_GRAVITY_MULTIPLIER,
+    );
+  }
+  return isSlowActive(state) ? base / (1 - state.slow.rate) : base;
 }
 
 function isFeverActive(state: GameState): boolean {
@@ -883,14 +890,15 @@ export function step(
 
   if (next.active === null) return { state: next, events: sink.drain() };
 
-  // 自然落下
+  // 自然落下 / ソフトドロップ
   const interval = getDropIntervalMs(next);
+  const maxCells = next.softDropping ? MAX_SOFT_DROP_CELLS_PER_STEP : MAX_DROP_CELLS_PER_STEP;
   let dropTimer = next.dropTimerMs + deltaMs;
   let cellsDropped = 0;
 
   while (dropTimer >= interval && next.active !== null) {
     // 落下間隔が急に短くなっても一気に落ちないようにする安全弁
-    if (cellsDropped >= MAX_DROP_CELLS_PER_STEP) {
+    if (cellsDropped >= maxCells) {
       dropTimer = interval;
       break;
     }

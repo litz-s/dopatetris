@@ -24,23 +24,25 @@ export const LOCK_DELAY_MS = 500;
 export const MAX_LOCK_RESETS = 15;
 
 /**
- * ソフトドロップ時の落下速度倍率。
- * ガイドラインの20倍は体感でほぼ即落下だったため、押した実感が残る12倍にしてある。
+ * ソフトドロップの基準間隔。50マス/秒、20マスを約0.4秒で降りる。
+ * 自然落下やコインの減速係数には連動させない。
  */
-export const SOFT_DROP_MULTIPLIER = 12;
+export const SOFT_DROP_INTERVAL_MS = 20;
 
 /**
- * ソフトドロップの最短間隔（ミリ秒）。
- * 高レベルでは自然落下自体が速く、割り算だけだと1フレームに何十マスも落ちてしまう。
- * ここで下限を設けて操作可能な速さに保つ。
+ * 自然落下が基準速度に迫る高レベルだけ、実効自然落下速度の1.25倍を確保する。
+ * 実効速度は下の1ステップ上限も含めて求める。
  */
-export const SOFT_DROP_MIN_INTERVAL_MS = 35;
+export const SOFT_DROP_FAST_GRAVITY_MULTIPLIER = 1.25;
 
 /**
  * 1ステップで落下できる最大マス数。
  * 落下間隔が急に短くなったときに一気に落ちるのを防ぐ安全弁。
  */
 export const MAX_DROP_CELLS_PER_STEP = 2;
+
+/** 高レベルのソフトドロップが自然落下と同じ上限に詰まらないようにする。 */
+export const MAX_SOFT_DROP_CELLS_PER_STEP = 3;
 
 /** Next 表示数 */
 export const NEXT_COUNT = 5;
