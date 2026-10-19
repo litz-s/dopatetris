@@ -37,8 +37,8 @@ import {
   getClearDelayMs,
   LOCK_DELAY_MS,
   MAX_DROP_CELLS_PER_STEP,
+  MAX_SOFT_DROP_CELLS_PER_STEP,
   MAX_LOCK_RESETS,
-  SOFT_DROP_MIN_INTERVAL_MS,
   TIME_PRESSURE_INTERVAL_MS,
   NEXT_COUNT,
   SCORE_TABLE,
@@ -156,11 +156,8 @@ function getDropIntervalMs(state: GameState): number {
   const index = Math.min(getEffectiveLevel(state) - 1, GRAVITY_TABLE_MS.length - 1);
   const base = GRAVITY_TABLE_MS[Math.max(0, index)] ?? 1000;
 
-  const slowed = isSlowActive(state) ? base / (1 - state.slow.rate) : base;
-  if (!state.softDropping) return slowed;
-
-  // 自然落下より遅くはならず、下限より速くもならないようにする
-  return Math.min(slowed, Math.max(SOFT_DROP_MIN_INTERVAL_MS, slowed / SOFT_DROP_MULTIPLIER));
+  const naturalInterval = isSlowActive(state) ? base / (1 - state.slow.rate) : base;
+  return state.softDropping ? naturalInterval / SOFT_DROP_MULTIPLIER : naturalInterval;
 }
 
 function isFeverActive(state: GameState): boolean {
@@ -883,14 +880,15 @@ export function step(
 
   if (next.active === null) return { state: next, events: sink.drain() };
 
-  // 自然落下
+  // 自然落下 / ソフトドロップ
   const interval = getDropIntervalMs(next);
+  const maxCells = next.softDropping ? MAX_SOFT_DROP_CELLS_PER_STEP : MAX_DROP_CELLS_PER_STEP;
   let dropTimer = next.dropTimerMs + deltaMs;
   let cellsDropped = 0;
 
   while (dropTimer >= interval && next.active !== null) {
     // 落下間隔が急に短くなっても一気に落ちないようにする安全弁
-    if (cellsDropped >= MAX_DROP_CELLS_PER_STEP) {
+    if (cellsDropped >= maxCells) {
       dropTimer = interval;
       break;
     }

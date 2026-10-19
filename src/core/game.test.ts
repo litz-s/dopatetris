@@ -19,6 +19,7 @@ import {
   GRAVITY_DELAY_MS,
   LINE_CLEAR_DELAY_MS,
   MAX_DROP_CELLS_PER_STEP,
+  MAX_SOFT_DROP_CELLS_PER_STEP,
   NEXT_COUNT,
   STACK_COOLDOWN_MS,
   TETRIS_CLEAR_DELAY_MS,
@@ -409,7 +410,7 @@ describe('ソフトドロップ', () => {
     const result = step(charged, FIXED_TIMESTEP_MS, [{ kind: 'softDrop', active: true }]);
     const afterY = result.state.active?.y ?? 0;
 
-    expect(afterY - beforeY).toBeLessThanOrEqual(MAX_DROP_CELLS_PER_STEP);
+    expect(afterY - beforeY).toBeLessThanOrEqual(MAX_SOFT_DROP_CELLS_PER_STEP);
   });
 
   it('1ステップで落ちるマス数に上限がある', () => {
@@ -421,7 +422,9 @@ describe('ソフトドロップ', () => {
     const result = step(charged, FIXED_TIMESTEP_MS, []);
     const afterY = result.state.active?.y ?? 0;
 
-    expect(afterY - beforeY).toBeLessThanOrEqual(MAX_DROP_CELLS_PER_STEP);
+    expect(afterY - beforeY).toBeLessThanOrEqual(MAX_SOFT_DROP_CELLS_PER_STEP);
+    const natural = step({ ...charged, softDropping: false }, FIXED_TIMESTEP_MS).state;
+    expect((natural.active?.y ?? beforeY) - beforeY).toBeLessThanOrEqual(MAX_DROP_CELLS_PER_STEP);
   });
 
   it('押しっぱなしでも自然落下より速く、即着地はしない', () => {
